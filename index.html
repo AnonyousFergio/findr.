@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+  <title>mukoto · flux carrier & route</title>
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- Google Font: Pacifico + Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:opsz@14..32&display=swap" />
+  <!-- Chart.js for analytics (kept for other charts if needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ----- global reset + no scrollbars anywhere (firefox + webkit) ----- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      scrollbar-width: none; /* firefox */
+    }
+    *::-webkit-scrollbar {
+      display: none; /* chrome/safari/edge */
+    }
+
+    :root {
+      --primary: #000000;
+      --primary-deep: #222222;
+      --ink: #1e293b;
+      --ink-soft: #334155;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg-light: #f8fafc;
+      --shadow-bottom: 0 -8px 30px -6px rgba(0,30,50,0.2);
+      --radius-card: 12px;
+      --radius-pill: 30px;
+      --radius-round: 20px;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #6b7280;
+      --pink: #ec4899;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #eef3fb;
+      touch-action: pan-x pan-y;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .map-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #c1d4f0;
+      overflow: hidden;
+    }
+
+    .map-layer iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      pointer-events: auto;
+    }
+
+    .map-hint {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(14px);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink-soft);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      border: 1px solid rgba(255,255,255,0.6);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    /* ----- bottom sheet (draggable) ----- */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: transparent;
+      border-top-left-radius: 36px;
+      border-top-right-radius: 36px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+      transition: transform 0.2s ease-out;
+      will-change: transform;
+      transform: translateY(0);
+    }
+
+    .sheet-content {
+      background: rgba(255,255,255,0.86);
+      backdrop-filter: blur(22px);
+      border-top-left-radius: 18px;
+      border-top-right-radius: 18px;
+      box-shadow: 0 -16px 40px -8px rgba(0,30,60,0.3);
+      padding: 0 18px 0 18px;
+      border: 1px solid rgba(255,255,255,0.5);
+      border-bottom: none;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      max-height: 84vh;
+      overflow: hidden;
+      transition: max-height 0.2s ease-out;
+    }
+
+    .mobile-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 15px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .brand {
+      font-family: 'Pacifico', cursive;
+      font-weight: 400;
+      font-size: 2rem;
+      background: linear-gradient(45deg,
+        #f8c39a 0%,
+        #f6b3d1 50%,
+        #caa6df 75%,
+        #a5b1f5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 100% 100%;
+      background-position: 50% 50%;
+      letter-spacing: 0.5px;
+      transform: translateY(2px);
+      white-space: nowrap;
+      padding-bottom: 6px;
+    }
+    .brand-container {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+    .marketplace-badge {
+      font-size: 0.6rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 30px;
+      color: var(--ink-soft);
+      letter-spacing: 0.3px;
+      margin-top: -8px;
+      margin-left: 8px;
+      width: fit-content;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+    .marketplace-badge:active {
+      background: var(--primary);
+      color: white;
+    }
+
+    @keyframes movingGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes movingHolo {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .right-icons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .drag-handle {
+      width: 52px;
+      height: 5px;
+      background: rgba(100,116,139,0.5);
+      border-radius: 10px;
+      cursor: grab;
+      touch-action: none;
+      transition: background 0.2s;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 20px;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+      background: var(--primary);
+    }
+
+    .icon-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: white;
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--ink);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: 0.1s;
+    }
+    .icon-btn:active { background: #eef3fc; transform: scale(0.96); }
+
+    .mobile-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 25px;
+      padding: 8px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.02);
+      flex-shrink: 0;
+    }
+    .mobile-search i { color: var(--muted); }
+    .mobile-search input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-size: 1rem;
+    }
+
+    .sheet-scroll {
+      overflow-y: auto;
+      padding: 2px 6px 88px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    .sheet-scroll { scrollbar-width: none; }
+    .sheet-scroll::-webkit-scrollbar { display: none; }
+
+    .hero-mobile, .chip-row, .featured-header, .cards-scroll,
+    .divider-title, .trending-row, .guides-row, .curated-row,
+    .route-section, .carrier-section { flex-shrink: 0; }
+
+    .cards-scroll, .chip-row, .trending-row, .guides-row, .curated-row, .carrier-row {
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .cards-scroll::-webkit-scrollbar, .chip-row::-webkit-scrollbar,
+    .trending-row::-webkit-scrollbar, .guides-row::-webkit-scrollbar,
+    .curated-row::-webkit-scrollbar, .carrier-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .route-section.horizontal-route {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 4px 2px 14px 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .route-section.horizontal-route::-webkit-scrollbar { display: none; }
+    .route-section.horizontal-route .route-card {
+      flex: 0 0 260px;
+      margin-bottom: 0;
+    }
+
+    .route-section.vertical-route {
+      display: block;
+    }
+    .route-section.vertical-route .route-card {
+      width: 100%;
+      margin-bottom: 14px;
+    }
+
+    .route-section.horizontal-route-detailed {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 6px 2px 20px 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .route-section.horizontal-route-detailed::-webkit-scrollbar { display: none; }
+    .route-section.horizontal-route-detailed .route-card {
+      flex: 0 0 300px;
+      margin-bottom: 0;
+    }
+
+    /* Destination picker styles */
+    .destination-picker {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin: 16px 0 20px 0;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      border: 1px solid var(--line);
+    }
+    .destination-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .destination-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 40%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000000;
+      font-size: 1.2rem;
+    }
+    .destination-input {
+      flex: 1;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      color: var(--ink);
+      outline: none;
+    }
+    .destination-input:focus {
+      border-color: #ff9a9e;
+      box-shadow: 0 0 0 3px rgba(255,154,158,0.2);
+    }
+    .swap-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 40%;
+      background: #fce4e4;
+      border: 1px solid #ffd1d1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ff6b6b;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+    .swap-btn:active {
+      background: #ffd1d1;
+      transform: scale(0.92);
+    }
+    .date-selector {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      overflow-x: auto;
+      padding: 4px 0 8px 0;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .date-selector::-webkit-scrollbar {
+      display: none;
+    }
+    .date-chip {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .date-chip i {
+      color: #334155;
+    }
+    .date-chip.active {
+      background: #000000;
+      border-color: #000000;
+      color: white;
+    }
+    .date-chip.active i {
+      color: white;
+    }
+
+    /* hero block */
+    .hero-mobile {
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 12px 26px -14px rgba(0,30,50,0.25);
+    }
+    .hero-left { display: flex; align-items: center; gap: 14px; }
+    .hero-icon {
+      width: 46px; height: 46px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary); font-size: 1.5rem;
+    }
+    .hero-text h3 { font-size: 1.2rem; font-weight: 700; }
+    .hero-text p { font-size: 0.8rem; color: var(--muted); }
+    .hero-actions { display: flex; gap: 8px; }
+    .pill-btn {
+      width: 42px; height: 42px; border-radius: 40%; background: white;
+      border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; color: var(--ink); cursor: pointer;
+    }
+    .pill-btn:active { background: #f0f4fe; transform: scale(0.96); }
+    .btn-primary {
+      background: var(--primary); border: none; padding: 0 18px; border-radius: 25px;
+      font-weight: 600; font-size: 0.9rem; color: white; display: flex; align-items: center;
+      gap: 8px; box-shadow: 0 14px 26px -14px var(--primary); cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-primary:active { background: var(--primary-deep); transform: scale(0.98); }
+
+    /* chips */
+    .chip-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 6px 2px 8px 2px;
+    }
+    .chip {
+      display: flex; align-items: center; gap: 6px; padding: 8px 18px;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.7); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.5); font-weight: 550; font-size: 0.9rem;
+      color: var(--ink-soft); white-space: nowrap; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    }
+    .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* featured header & cards */
+    .featured-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 6px 0 6px 0;
+    }
+    .featured-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .marker {
+      width: 38px;
+      height: 38px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+    .featured-header h4 { font-weight: 700; font-size: 1.1rem; }
+    .meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .ghost-link {
+      background: rgba(255,255,255,0.7); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.4); padding: 6px 14px; border-radius: 25px;
+      font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    }
+    .ghost-link:active { background: white; }
+
+    .cards-scroll {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 6px 2px 14px 2px;
+    }
+
+    .place-card {
+      flex: 0 0 230px;
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 24px -12px rgba(0,30,50,0.2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .place-card:active { transform: scale(0.98); background: #fcfdff; }
+    .card-thumb {
+      height: 110px;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      position: relative;
+    }
+    .card-tag {
+      position: absolute; top: 8px; left: 8px;
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
+      padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .card-body { padding: 14px 14px 6px; }
+    .place-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .place-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.2; height: 30px; overflow: hidden; }
+    .rating-row { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; margin: 4px 0; }
+    .stars { color: #f59e0b; }
+    .card-footer { display: flex; gap: 8px; padding: 4px 14px 12px; }
+    .info-badge {
+      flex: 1; display: flex; align-items: center; gap: 4px; background: #f1f5f9;
+      padding: 6px 8px; border-radius: 20px; font-size: 0.65rem; font-weight: 600; color: var(--ink-soft);
+    }
+
+    /* section dividers */
+    .divider-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 12px 0 8px 0;
+    }
+    .divider-title h4 {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--ink);
+    }
+    .divider-title .fade-link {
+      font-size: 0.8rem;
+      color: var(--primary);
+      font-weight: 500;
+      background: rgba(255,255,255,0.5);
+      padding: 4px 10px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+    }
+
+    /* trending row - with white text */
+    .trending-row {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 4px 2px 14px 2px;
+    }
+    .trend-item {
+      flex: 0 0 140px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 8px 22px -8px rgba(0,30,50,0.2);
+      background-size: cover;
+      background-position: center;
+      background-blend-mode: overlay;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .trend-icon {
+      width: 38px; height: 38px;
+      background: white;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary); font-size: 1.1rem;
+      border: 1px solid var(--line);
+      margin-bottom: 6px;
+    }
+    .trend-item .trend-title { 
+      font-weight: 700; 
+      font-size: 0.9rem;
+      color: #ffffff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+    .trend-item .trend-sub { 
+      font-size: 0.65rem;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    /* guides row */
+    .guides-row {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 4px 2px 18px 2px;
+    }
+    .guide-card {
+      flex: 0 0 130px;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .guide-cover {
+      height: 90px;
+      background-size: cover !important;
+      background-position: center !important;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 8px;
+    }
+    .guide-label {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--primary-deep);
+    }
+    .guide-info { padding: 10px 10px 12px; }
+    .guide-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
+    .guide-meta { font-size: 0.65rem; color: var(--muted); }
+
+    /* curated row */
+    .curated-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 4px 2px 18px 2px;
+    }
+    .curated-item {
+      flex: 0 0 180px;
+      background: linear-gradient(145deg, #e2eafc, #f0f5ff);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.5);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(6px);
+      background-size: cover;
+      background-position: center;
+    }
+    .curated-icon {
+      width: 46px; height: 46px;
+      background: white;
+      border-radius: 40%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      color: var(--primary);
+      box-shadow: 0 6px 14px rgba(0,30,50,0.1);
+    }
+    .curated-text .curated-title { font-weight: 700; font-size: 0.9rem; }
+    .curated-text .curated-desc { font-size: 0.65rem; color: var(--muted); }
+
+    .reel-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 4px 2px 18px 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .reel-row::-webkit-scrollbar { display: none; }
+    .reel-card {
+      flex: 0 0 140px;
+      height: 240px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: 0 10px 22px -10px rgba(0,30,50,0.2);
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      cursor: pointer;
+    }
+    .reel-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.15) 40%, rgba(0,0,0,0));
+    }
+    .reel-meta {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    .reel-title { font-weight: 700; font-size: 0.9rem; }
+    .reel-sub { font-size: 0.7rem; opacity: 0.9; }
+    .reel-play {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.7);
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    /* ===== ROUTE CARD ===== */
+    .route-card {
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.5);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 8px 20px -10px rgba(0,30,50,0.2);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .route-card:active { transform: scale(0.98); background: rgba(255,255,255,0.9); }
+    .route-card.expanded {
+      background: white;
+      border: 2px solid var(--primary);
+    }
+    .route-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .route-icon {
+      width: 48px; height: 48px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: var(--primary);
+      border: 1px solid var(--line);
+      background-size: cover;
+      background-position: center;
+    }
+    .route-details { flex: 1; }
+    .route-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .route-meta { display: flex; gap: 10px; font-size: 0.7rem; color: var(--muted); }
+    .route-badge {
+      background: var(--primary);
+      color: white;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-weight: 600;
+      font-size: 0.7rem;
+    }
+    .route-stats {
+      display: flex;
+      justify-content: space-around;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 10px;
+      margin: 6px 0;
+    }
+    .stat-item { text-align: center; }
+    .stat-value { font-weight: 700; font-size: 1rem; color: var(--primary); }
+    .stat-label { font-size: 0.6rem; color: var(--muted); }
+    .route-schedule {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--line);
+    }
+    .route-stops-container {
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .route-stops-title { font-weight: 600; font-size: 0.75rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .route-stops { display: flex; flex-direction: column; gap: 6px; }
+    .stop-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; }
+    .stop-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; }
+    .stop-dot.start { background: var(--success); }
+    .stop-dot.end { background: var(--danger); }
+    .stop-name { flex: 1; }
+    .stop-time { color: var(--muted); font-size: 0.6rem; }
+    .fare-info { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+    .fare-type { display: flex; flex-direction: column; }
+    .fare-price { font-weight: 700; color: var(--success); font-size: 1rem; }
+    .fare-desc { font-size: 0.6rem; color: var(--muted); }
+    .route-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .route-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: 0.1s;
+    }
+    .route-btn.primary { background: var(--primary); color: white; }
+    .route-btn.secondary { background: white; color: var(--ink); border: 1px solid var(--line); }
+    .route-btn.outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+    .route-btn:active { transform: scale(0.96); }
+
+    /* ===== CARRIER SECTION ===== */
+    .carrier-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 4px 0 8px;
+    }
+    .carrier-row {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 4px 2px 18px 2px;
+    }
+    .carrier-card {
+      flex: 0 0 280px;
+      background: white;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 12px 24px -14px rgba(0,30,50,0.2);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .carrier-card:active { transform: scale(0.98); background: #fcfdff; }
+    .carrier-card.premium {
+      border: 2px solid gold;
+      background: linear-gradient(145deg, #fff9e6, white);
+    }
+    .carrier-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .carrier-icon {
+      width: 54px; height: 54px;
+      background: #f0f7ff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--primary);
+      background-size: cover !important;
+      background-position: center !important;
+    }
+    .carrier-info { flex: 1; }
+    .carrier-name { font-weight: 700; font-size: 1rem; margin-bottom: 2px; }
+    .carrier-desc { font-size: 0.65rem; color: var(--muted); }
+    .carrier-badge {
+      background: var(--purple);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 16px;
+      font-size: 0.6rem;
+      font-weight: 600;
+    }
+    .carrier-rating {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+    .stars { color: #f59e0b; }
+    .reviews { color: var(--muted); font-size: 0.65rem; }
+    .carrier-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 6px 0;
+    }
+    .feature-tag {
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+    .feature-tag.available {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .feature-tag.premium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .carrier-pricing {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 6px 0;
+      padding: 10px;
+      background: #ffffff;
+      border-radius: 14px;
+    }
+    .price {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--success);
+    }
+    .price small {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-weight: normal;
+    }
+    .delivery-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--ink-soft);
+    }
+    .carrier-coverage {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      padding: 6px 0;
+    }
+    .coverage-badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 16px;
+      font-size: 0.55rem;
+    }
+    .carrier-stats {
+      display: flex;
+      gap: 14px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .carrier-stat { flex: 1; text-align: center; }
+    .carrier-stat-value { font-weight: 700; color: var(--primary); font-size: 0.9rem; }
+    .carrier-stat-label { font-size: 0.55rem; color: var(--muted); }
+    .carrier-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .carrier-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.7rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: 0.1s;
+    }
+    .carrier-btn.primary { background: var(--primary); color: white; }
+    .carrier-btn.secondary { background: #f1f5f9; color: var(--ink); }
+    .carrier-btn:active { transform: scale(0.96); }
+
+    /* Chart containers */
+    .chart-container {
+      background: white;
+      border-radius: 14px;
+      padding: 14px;
+      margin: 12px 0;
+      height: 180px;
+    }
+
+    /* Timeline */
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: 10px 0;
+    }
+    .timeline-stop {
+      flex: 1;
+      text-align: center;
+      font-size: 0.55rem;
+      color: var(--muted);
+    }
+    .timeline-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      margin: 0 auto 4px;
+    }
+    .timeline-line {
+      height: 2px;
+      background: var(--line);
+      flex: 1;
+    }
+
+    /* Booking modal styles */
+    .booking-modal, .info-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .booking-modal.active, .info-modal.active { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-header h3 { font-weight: 700; color: var(--ink); font-size: 1.1rem; }
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 40%;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .booking-form { display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-weight: 600; font-size: 0.8rem; color: var(--ink-soft); }
+    .form-group input, .form-group select {
+      padding: 12px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      font-size: 0.9rem;
+      background: white;
+    }
+    .form-group input:focus, .form-group select:focus { outline: 2px solid var(--primary); }
+    .booking-summary {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 14px;
+      margin: 14px 0;
+    }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+    .summary-total { font-weight: 700; color: var(--primary); font-size: 1rem; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+    .confirm-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 25px; font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+
+    /* dock */
+    .fixed-dock {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px 16px 12px;
+      background: transparent;
+      z-index: 30;
+      pointer-events: none;
+    }
+    .fixed-dock .dock-group {
+      display: flex;
+      gap: 8px;
+      background: rgb(255, 255, 255);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      padding: 6px 6px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+      pointer-events: auto;
+    }
+    .fixed-dock .dock-item {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #0f172a;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.1s;
+    }
+    .fixed-dock .dock-item.primary { background: var(--primary); color: white; }
+    .fixed-dock .dock-item.whatsapp { background: #ffffff; color: rgb(0, 0, 0); }
+    .fixed-dock .dock-item:active { transform: scale(0.92); background: #ffffff; }
+    .fixed-dock .dock-item.primary:active { background: var(--primary-deep); }
+    .fixed-dock .dock-item.whatsapp:active { background: #000000; }
+    .fixed-dock .dock-item.active {
+      background: var(--primary) !important;
+      color: white !important;
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.5);
+    }
+    .fixed-dock .dock-item.active i { color: white; }
+    .fixed-dock .dock-item.post {
+      width: 44px;
+      height: 44px;
+      background: #bbbbbb;
+      color: white;
+     }
+
+    .toast-message {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      box-shadow: 0 20px 40px -8px #0f172a;
+      opacity: 0;
+      transition: 0.2s;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+      border: 1px solid #334155;
+    }
+    .toast-message.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* view/section visibility */
+    .section { display: none; }
+    .section.active-section { display: block; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- map layer -->
+    <div class="map-layer">
+      <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d59913.689865575216!2d28.5914691!3d-20.1921399!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2szw!4v1772048761572!5m2!1sen!2szw" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div class="map-hint"><i class="fa-solid fa-map"></i> <span>Bulawayo · flux</span></div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div class="booking-modal" id="bookingModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Book Service</h3>
+          <div class="modal-close" id="closeModal"><i class="fa-solid fa-times"></i></div>
+        </div>
+        <div class="booking-form" id="bookingForm"></div>
+      </div>
+    </div>
+    <div class="info-modal" id="infoModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="infoTitle">Details</h3>
+          <div class="modal-close" id="closeInfo"><i class="fa-solid fa-times"></i></div>
+        </div>
+        <div id="infoBody"></div>
+      </div>
+    </div>
+
+    <!-- bottom sheet -->
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-content" id="sheetContent">
+        <div class="mobile-top">
+          <div class="brand-container">
+            <span class="brand">findr</span>
+            <span class="marketplace-badge" id="marketplacePopup">marketplace</span>
+          </div>
+          <div class="right-icons">
+            <div class="icon-btn" id="bookmarkBtn"><i class="fa-regular fa-bookmark"></i></div>
+            <div class="icon-btn" id="profileBtn"><i class="fa-regular fa-user"></i></div>
+          </div>
+          <div class="drag-handle" id="dragHandle"></div>
+        </div>
+
+        <div class="mobile-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" id="searchInput" placeholder="Search places, routes, carriers..." />
+        </div>
+
+        <!-- SCROLLABLE CONTENT with all sections -->
+        <div class="sheet-scroll" id="sheetScroll">
+          
+          <!-- HOME SECTION -->
+          <div id="homeSection" class="section active-section">
+            
+            <div class="chip-row" id="chipContainer"></div>
+
+            <section class="hero-mobile">
+              <div class="hero-left">
+                <div class="hero-icon"><i class="fa-regular fa-compass"></i></div>
+                <div class="hero-text"><h3>Explore Nearby</h3><p>around you</p></div>
+              </div>
+              <div class="hero-actions">
+                <div class="pill-btn" id="shuffleBtn"><i class="fa-solid fa-shuffle"></i></div>
+                <button class="btn-primary" id="browseAllBtn"><i class="fa-solid fa-layer-group"></i> All</button>
+              </div>
+            </section>
+
+            <div class="divider-title">
+              <h4><i class="fa-regular fa-gem" style="color:var(--primary); margin-right:6px;"></i> Curated picks</h4>
+              <span class="fade-link" id="curatedMoreHome">Explore</span>
+            </div>
+            <div class="curated-row" id="curatedContainerHome"></div>
+
+            <div class="divider-title">
+              <h4><i class="fa-solid fa-fire-flame-curved" style="color:var(--primary); margin-right:6px;"></i> Trending now</h4>
+              <span class="fade-link" id="trendingMoreHome">More</span>
+            </div>
+            <div class="trending-row" id="trendingContainerHome"></div>
+
+            <div class="divider-title">
+              <h4><i class="fa-regular fa-map" style="color:var(--primary); margin-right:6px;"></i> City guides</h4>
+              <span class="fade-link" id="guidesMoreHome">All guides</span>
+            </div>
+            <div class="guides-row" id="guidesContainerHome"></div>
+
+            <div class="divider-title">
+              <h4><i class="fa-solid fa-clapperboard" style="color:var(--primary); margin-right:6px;"></i> Reels</h4>
+              <span class="fade-link" id="reelsMoreHome">Watch</span>
+            </div>
+            <div class="reel-row" id="reelContainerHome"></div>
+
+            <div class="featured-header">
+              <div class="featured-title">
+                <div class="marker"><i class="fa-solid fa-star"></i></div>
+                <div><h4>Featured</h4><div class="meta" id="featuredMeta">4 spots near you</div></div>
+              </div>
+              <div class="ghost-link" id="viewAllBtn">View all <i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+            <div class="cards-scroll" id="cardsContainer"></div>
+
+            <div class="divider-title">
+              <h4><i class="fa-solid fa-route" style="color:var(--primary); margin-right:6px;"></i> Popular routes</h4>
+              <span class="fade-link" id="routeMoreBtn">Plan a trip</span>
+            </div>
+            <div class="route-section horizontal-route" id="routeContainer"></div>
+
+            <div class="divider-title">
+              <h4><i class="fa-solid fa-truck-fast" style="color:var(--primary); margin-right:6px;"></i> Reliable carriers</h4>
+              <span class="fade-link" id="carrierMoreBtn">All carriers</span>
+            </div>
+            <div class="carrier-section" id="carrierContainer"></div>
+          </div>
+
+          <!-- ROUTES DETAIL SECTION (ICONS ADDED TO FILTERS) -->
+          <div id="routesSection" class="section">
+            <div style="padding: 20px 0;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <h3 style="font-size: 1.3rem;">All Routes</h3>
+                <div style="background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--muted);">12 available</div>
+              </div>
+              
+              <!-- Route search -->
+              <div style="background: white; border-radius: 25px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; position: relative;">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--muted);"></i>
+                <input type="text" placeholder="Search routes by name, stop, or area..." style="border: none; outline: none; width: 100%; background: transparent;" id="routeSearch">
+              </div>
+              
+              <!-- Advanced route filters with icons (UPDATED) -->
+              <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding: 4px 0;">
+                <span class="chip active" data-filter="all"><i class="fa-solid fa-map"></i> All Routes</span>
+                <span class="chip" data-filter="express"><i class="fa-solid fa-bolt"></i> Express</span>
+                <span class="chip" data-filter="local"><i class="fa-solid fa-city"></i> Local</span>
+                <span class="chip" data-filter="night"><i class="fa-solid fa-moon"></i> Night Service</span>
+                <span class="chip" data-filter="weekend"><i class="fa-solid fa-calendar-week"></i> Weekend</span>
+                <span class="chip" data-filter="electric"><i class="fa-solid fa-charging-station"></i> Electric</span>
+                <span class="chip" data-filter="premium"><i class="fa-regular fa-gem"></i> Premium</span>
+              </div>
+              
+              <!-- Destination picker -->
+              <div class="destination-picker">
+                <div class="destination-row">
+                  <div class="destination-icon">
+                    <i class="fa-solid fa-circle-dot"></i>
+                  </div>
+                  <input type="text" class="destination-input" id="fromLocation" placeholder="From: Current location" value="City Centre">
+                </div>
+                <div class="destination-row">
+                  <div class="destination-icon">
+                    <i class="fa-solid fa-location-dot"></i>
+                  </div>
+                  <input type="text" class="destination-input" id="toLocation" placeholder="To: Choose destination" value="Hillside">
+                  <div class="swap-btn" id="swapLocations">
+                    <i class="fa-solid fa-arrow-up-arrow-down"></i>
+                  </div>
+                </div>
+                <div class="date-selector">
+                  <div class="date-chip active" data-date="today">
+                    <i class="fa-regular fa-calendar"></i> Today
+                  </div>
+                  <div class="date-chip" data-date="tomorrow">
+                    <i class="fa-regular fa-calendar"></i> Tomorrow
+                  </div>
+                  <div class="date-chip" data-date="wed">
+                    <i class="fa-regular fa-calendar"></i> Wed 5
+                  </div>
+                  <div class="date-chip" data-date="thu">
+                    <i class="fa-regular fa-calendar"></i> Thu 6
+                  </div>
+                  <div class="date-chip" data-date="fri">
+                    <i class="fa-regular fa-calendar"></i> Fri 7
+                  </div>
+                  <div class="date-chip" data-date="weekend">
+                    <i class="fa-regular fa-calendar"></i> Weekend
+                  </div>
+                </div>
+              </div>
+
+              <!-- Route list -->
+              <div class="route-section horizontal-route-detailed" id="routesDetailContainer"></div>
+            </div>
+          </div>
+
+          <!-- CARRIERS DETAIL SECTION (ICONS ADDED TO FILTERS & COMPARISON) -->
+          <div id="carriersSection" class="section">
+            <div style="padding: 20px 0;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <h3 style="font-size: 1.3rem;">All Carriers</h3>
+                <div style="background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--muted);">18 partners</div>
+              </div>
+              <!-- Advanced carrier filters with icons (UPDATED) -->
+              <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding: 4px 0;">
+                <span class="chip active" data-filter="all"><i class="fa-solid fa-grid-2"></i> All</span>
+                <span class="chip" data-filter="courier"><i class="fa-solid fa-envelope"></i> Courier</span>
+                <span class="chip" data-filter="freight"><i class="fa-solid fa-truck"></i> Freight</span>
+                <span class="chip" data-filter="express"><i class="fa-solid fa-bolt"></i> Express</span>
+                <span class="chip" data-filter="international"><i class="fa-solid fa-globe"></i> International</span>
+                <span class="chip" data-filter="local"><i class="fa-solid fa-city"></i> Local</span>
+                <span class="chip" data-filter="eco"><i class="fa-solid fa-leaf"></i> Eco-friendly</span>
+                <span class="chip" data-filter="premium"><i class="fa-regular fa-gem"></i> Premium</span>
+              </div>
+              <!-- Carrier search -->
+              <div style="background: white; border-radius: 25px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--muted);"></i>
+                <input type="text" placeholder="Search carriers by name, feature, or coverage..." style="border: none; outline: none; width: 100%; background: transparent;" id="carrierSearch">
+              </div>
+              <!-- Carrier comparison table with icons (UPDATED) -->
+              <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 20px;">
+                <h4 style="margin-bottom: 12px;"><i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i> Quick Compare</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; font-size: 0.7rem;">
+                  <div style="background: #f1f5f9; padding: 8px; border-radius: 12px;">
+                    <div><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i></div>
+                    <div style="font-weight: 700;">Fastest</div>
+                    <div style="color: var(--primary);">EcoRush</div>
+                    <div style="color: var(--muted);">1 hour</div>
+                  </div>
+                  <div style="background: #f1f5f9; padding: 8px; border-radius: 12px;">
+                    <div><i class="fa-solid fa-sack-dollar" style="color: #10b981;"></i></div>
+                    <div style="font-weight: 700;">Cheapest</div>
+                    <div style="color: var(--primary);">SwiftLink</div>
+                    <div style="color: var(--muted);">$3.99</div>
+                  </div>
+                  <div style="background: #f1f5f9; padding: 8px; border-radius: 12px;">
+                    <div><i class="fa-regular fa-star" style="color: #f59e0b;"></i></div>
+                    <div style="font-weight: 700;">Top Rated</div>
+                    <div style="color: var(--primary);">EcoRush</div>
+                    <div style="color: var(--muted);">4.9 ★</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Carrier list -->
+              <div class="carrier-section">
+                <div class="carrier-row" id="carriersDetailContainer"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- POST SECTION -->
+          <div id="postSection" class="section">
+            <div style="padding: 20px 0;">
+              <div style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div style="width:44px; height:44px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:var(--primary);">
+                    <i class="fa-solid fa-pen"></i>
+                  </div>
+                  <div style="font-weight:700;">Create Post</div>
+                </div>
+                <textarea id="postTextarea" placeholder="Share an update..." style="width:100%; min-height:100px; border:1px solid var(--line); border-radius:12px; padding:12px; resize:vertical;"></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                  <div style="display:flex; gap:8px;">
+                    <button id="attachImage" class="carrier-btn secondary" style="padding:8px 12px;"><i class="fa-regular fa-image"></i> Image</button>
+                    <button id="attachLocation" class="carrier-btn secondary" style="padding:8px 12px;"><i class="fa-solid fa-location-dot"></i> Location</button>
+                  </div>
+                  <button id="submitPostBtn" class="carrier-btn primary" style="padding:10px 16px; border-radius:20px;"><i class="fa-solid fa-paper-plane"></i> Post</button>
+                </div>
+              </div>
+              <div style="margin-top:16px;">
+                <div style="font-weight:700; margin-bottom:8px;">Recent Posts</div>
+                <div id="postsFeed" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WHATSAPP SECTION -->
+          <div id="whatsappSection" class="section">
+            <div style="padding: 20px 0; text-align: center;">
+              <div style="background: #25D366; color: white; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 20px auto; font-size: 2.2rem;">
+                <i class="fa-brands fa-whatsapp"></i>
+              </div>
+              <h3 style="margin-bottom: 16px;">WhatsApp Support</h3>
+              <p style="color: var(--muted); margin-bottom: 24px;">Chat with our support team or get updates</p>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); border-radius: 30px; padding: 14px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fa-solid fa-headset" style="color: #25D366; font-size: 1.4rem;"></i>
+                  <div style="flex: 1; text-align: left;">
+                    <div style="font-weight: 600;">Customer Support</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">24/7 Available</div>
+                  </div>
+                  <button style="background: #25D366; color: white; border: none; padding: 8px 14px; border-radius: 25px; font-weight: 600;" id="chatSupportBtn">Chat</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); border-radius: 30px; padding: 14px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fa-solid fa-truck-fast" style="color: #25D366; font-size: 1.4rem;"></i>
+                  <div style="flex: 1; text-align: left;">
+                    <div style="font-weight: 600;">Delivery Updates</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">Track your package</div>
+                  </div>
+                  <button style="background: #25D366; color: white; border: none; padding: 8px 14px; border-radius: 25px; font-weight: 600;" id="trackBtn">Track</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height: 8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- fixed dock -->
+    <div class="fixed-dock">
+      <div class="dock-group">
+        <div class="dock-item active" id="navHome" data-action="home"><i class="fa-solid fa-house"></i></div>
+        <div class="dock-item" id="navRoutes" data-action="route"><i class="fa-solid fa-route"></i></div>
+        <div class="dock-item post" id="navPost" data-action="post"><i class="fa-solid fa-plus"></i></div>
+        <div class="dock-item" id="navCarriers" data-action="carrier"><i class="fa-solid fa-truck-fast"></i></div>
+        <div class="dock-item whatsapp" id="navWhatsapp" data-action="whatsapp"><i class="fa-brands fa-whatsapp"></i></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast-message"></div>
+  </div>
+
+  <script>
+    (function() {
+      // Drag functionality (unchanged)
+      const sheetContent = document.getElementById('sheetContent');
+      const dragHandle = document.getElementById('dragHandle');
+      let startY = 0, startTranslate = 0, isDragging = false;
+
+      function setSheetHeight(percentVh) {
+        const clamped = Math.min(84, Math.max(20, percentVh));
+        sheetContent.style.maxHeight = clamped + 'vh';
+      }
+
+      dragHandle.addEventListener('mousedown', dragStart);
+      dragHandle.addEventListener('touchstart', dragStart, { passive: false });
+
+      function dragStart(e) {
+        e.preventDefault();
+        startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        const currentMaxHeight = sheetContent.style.maxHeight;
+        let currentVh = 84;
+        if (currentMaxHeight && currentMaxHeight.includes('vh')) {
+          currentVh = parseFloat(currentMaxHeight);
+        } else {
+          const computed = window.getComputedStyle(sheetContent).maxHeight;
+          if (computed.includes('vh')) currentVh = parseFloat(computed);
+        }
+        startTranslate = currentVh;
+        isDragging = true;
+        window.addEventListener('mousemove', dragMove);
+        window.addEventListener('touchmove', dragMove, { passive: false });
+        window.addEventListener('mouseup', dragEnd);
+        window.addEventListener('touchend', dragEnd);
+      }
+
+      function dragMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        let currentY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        let newHeight = startTranslate - deltaVh;
+        newHeight = Math.min(84, Math.max(20, newHeight));
+        setSheetHeight(newHeight);
+      }
+
+      function dragEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        window.removeEventListener('mousemove', dragMove);
+        window.removeEventListener('touchmove', dragMove);
+        window.removeEventListener('mouseup', dragEnd);
+        window.removeEventListener('touchend', dragEnd);
+        const currentMax = sheetContent.style.maxHeight;
+        let currentVh = 84;
+        if (currentMax && currentMax.includes('vh')) currentVh = parseFloat(currentMax);
+        if (currentVh < 40) setSheetHeight(20);
+        else setSheetHeight(84);
+      }
+      dragHandle.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+      // Marketplace popup
+      const marketplaceBadge = document.getElementById('marketplacePopup');
+      marketplaceBadge.addEventListener('click', () => showToast('🛒 Marketplace · 24 new items'));
+
+      // Swap locations
+      const fromInput = document.getElementById('fromLocation');
+      const toInput = document.getElementById('toLocation');
+      const swapBtn = document.getElementById('swapLocations');
+      
+      if (swapBtn) {
+        swapBtn.addEventListener('click', () => {
+          const temp = fromInput.value;
+          fromInput.value = toInput.value;
+          toInput.value = temp;
+          showToast('Locations swapped');
+        });
+      }
+
+      // Date chip selection
+      const dateChips = document.querySelectorAll('.date-chip');
+      dateChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          dateChips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          const date = chip.getAttribute('data-date') || chip.textContent.trim();
+          showToast(`Selected: ${date}`);
+        });
+      });
+
+      // Navigation
+      const sections = {
+        home: document.getElementById('homeSection'),
+        routes: document.getElementById('routesSection'),
+        carriers: document.getElementById('carriersSection'),
+        post: document.getElementById('postSection'),
+        whatsapp: document.getElementById('whatsappSection')
+      };
+      const navItems = {
+        home: document.getElementById('navHome'),
+        routes: document.getElementById('navRoutes'),
+        post: document.getElementById('navPost'),
+        carriers: document.getElementById('navCarriers'),
+        whatsapp: document.getElementById('navWhatsapp')
+      };
+
+      function showSection(sectionName) {
+        Object.values(sections).forEach(section => { if (section) section.classList.remove('active-section'); });
+        if (sections[sectionName]) sections[sectionName].classList.add('active-section');
+        Object.entries(navItems).forEach(([key, item]) => {
+          if (item) key === sectionName ? item.classList.add('active') : item.classList.remove('active');
+        });
+        showToast(sectionName.charAt(0).toUpperCase() + sectionName.slice(1));
+      }
+
+      navItems.home.addEventListener('click', () => showSection('home'));
+      navItems.routes.addEventListener('click', () => showSection('routes'));
+      navItems.post.addEventListener('click', () => showSection('post'));
+      navItems.carriers.addEventListener('click', () => showSection('carriers'));
+      navItems.whatsapp.addEventListener('click', () => showSection('whatsapp'));
+
+      // Booking modal
+      const modal = document.getElementById('bookingModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalForm = document.getElementById('bookingForm');
+      const closeModal = document.getElementById('closeModal');
+
+      const infoModal = document.getElementById('infoModal');
+      const infoTitle = document.getElementById('infoTitle');
+      const infoBody = document.getElementById('infoBody');
+      const closeInfo = document.getElementById('closeInfo');
+
+      function openBookingModal(type, item) {
+        modal.classList.add('active');
+        modalTitle.textContent = `Book ${type}: ${item.name}`;
+        let formHtml = '';
+        if (type === 'Route') {
+          formHtml = `
+            <div class="form-group"><label>Number of passengers</label><select id="passengers"><option>1 passenger</option><option>2</option><option>3</option><option>4</option></select></div>
+            <div class="form-group"><label>Travel date</label><input type="date" id="travelDate" value="${new Date().toISOString().split('T')[0]}"></div>
+            <div class="form-group"><label>Travel time</label><select id="travelTime"><option>06:00 AM</option><option>08:00 AM</option><option>10:00 AM</option><option>12:00 PM</option><option>02:00 PM</option><option>04:00 PM</option><option>06:00 PM</option></select></div>
+            <div class="form-group"><label>Seat preference</label><select id="seatPref"><option>Any</option><option>Window</option><option>Aisle</option><option>Near door</option></select></div>
+            <div class="booking-summary"><div class="summary-row"><span>Route:</span><span>${item.name}</span></div><div class="summary-row"><span>Duration:</span><span>${item.time}</span></div><div class="summary-row"><span>Stops:</span><span>${item.stops}</span></div><div class="summary-row"><span>Fare per person:</span><span>${item.fare}</span></div><div class="summary-total">Total: $${(parseFloat(item.fare.replace('$', '')) * 2).toFixed(2)}</div></div>
+          `;
+        } else {
+          formHtml = `
+            <div class="form-group"><label>Package weight (kg)</label><select id="weight"><option>Up to 1kg</option><option>1-5kg</option><option>5-10kg</option><option>10-20kg</option><option>20-50kg</option></select></div>
+            <div class="form-group"><label>Pickup location</label><input type="text" id="pickup" placeholder="Enter address"></div>
+            <div class="form-group"><label>Delivery location</label><input type="text" id="delivery" placeholder="Enter address"></div>
+            <div class="form-group"><label>Service type</label><select id="serviceType"><option>Standard (2-3 days)</option><option>Express (next day)</option><option>Same day</option></select></div>
+            <div class="form-group"><label>Package type</label><select id="packageType"><option>Document</option><option>Parcel</option><option>Fragile</option><option>Perishable</option><option>Furniture</option></select></div>
+            <div class="booking-summary"><div class="summary-row"><span>Carrier:</span><span>${item.name}</span></div><div class="summary-row"><span>Rating:</span><span>${item.rating} ★</span></div><div class="summary-row"><span>Delivery time:</span><span>${item.deliveryTime}</span></div><div class="summary-total">Estimated: ${item.price}</div></div>
+          `;
+        }
+        formHtml += `<button class="confirm-btn" id="confirmBooking">Confirm Booking</button>`;
+        modalForm.innerHTML = formHtml;
+        document.getElementById('confirmBooking').addEventListener('click', () => {
+          modal.classList.remove('active');
+          showToast(`✅ ${type} booked successfully!`);
+        });
+      }
+
+      closeModal.addEventListener('click', () => modal.classList.remove('active'));
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+      function openInfoModal(type, data) {
+        infoModal.classList.add('active');
+        let title = 'Details';
+        let body = '';
+        if (type === 'Place') {
+          title = data.name;
+          body = `
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--line); margin-bottom:12px;">
+              <div style="height:140px; background:linear-gradient(145deg, ${data.grad[0]}, ${data.grad[1]}), url('${data.image}'); background-size:cover; background-position:center;"></div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <div style="font-weight:700;">${data.name}</div>
+              <div style="font-size:0.85rem; color:var(--muted);">${data.distance}</div>
+            </div>
+            <div style="font-size:0.9rem; color:var(--ink-soft); margin-bottom:10px;">${data.desc}</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+              <span class="stars">${'★'.repeat(Math.round(data.rating)) + '☆'.repeat(5 - Math.round(data.rating))}</span>
+              <span>${data.rating.toFixed(1)}</span>
+              <span style="color:var(--muted);">(${data.reviews})</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="route-btn secondary" style="flex:1;"><i class="fa-solid fa-location-arrow"></i> Directions</button>
+              <button class="route-btn primary" style="flex:1;"><i class="fa-regular fa-bookmark"></i> Save</button>
+            </div>
+          `;
+        } else if (type === 'Guide') {
+          title = data.name;
+          body = `
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--line); margin-bottom:12px;">
+              <div style="height:120px; background-image:url('${data.image}'); background-size:cover; background-position:center;"></div>
+            </div>
+            <div style="font-weight:700; margin-bottom:6px;">${data.name}</div>
+            <div style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">${data.meta}</div>
+            <div style="display:flex; gap:8px;">
+              <button class="route-btn secondary" style="flex:1;"><i class="fa-solid fa-share-nodes"></i> Share</button>
+              <button class="route-btn primary" style="flex:1;"><i class="fa-regular fa-eye"></i> Open</button>
+            </div>
+          `;
+        } else if (type === 'Trend') {
+          title = data.title;
+          body = `
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--line); margin-bottom:12px;">
+              <div style="height:120px; background-image:url('${data.image}'); background-size:cover; background-position:center;"></div>
+            </div>
+            <div style="font-size:0.95rem; font-weight:700; margin-bottom:6px;">${data.title}</div>
+            <div style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">${data.subtitle}</div>
+            <button class="route-btn primary" style="width:100%;"><i class="fa-solid fa-magnifying-glass"></i> Explore</button>
+          `;
+        } else if (type === 'Curated') {
+          title = data.title;
+          body = `
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--line); margin-bottom:12px;">
+              <div style="height:120px; background-image:url('${data.image}'); background-size:cover; background-position:center;"></div>
+            </div>
+            <div style="font-size:0.95rem; font-weight:700; margin-bottom:6px;">${data.title}</div>
+            <div style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">${data.desc}</div>
+            <button class="route-btn primary" style="width:100%;"><i class="fa-solid fa-list"></i> View list</button>
+          `;
+        } else if (type === 'Reel') {
+          title = `Reel · ${data.title}`;
+          body = `
+            <div style="border-radius:14px; overflow:hidden; border:1px solid var(--line); margin-bottom:12px;">
+              <div style="height:220px; background-image:url('${data.image}'); background-size:cover; background-position:center;"></div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <div style="font-weight:700;">${data.title}</div>
+              <div style="font-size:0.85rem; color:var(--muted);">${data.views} views</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="route-btn secondary" style="flex:1;"><i class="fa-solid fa-share-nodes"></i> Share</button>
+              <button class="route-btn primary" style="flex:1;"><i class="fa-solid fa-play"></i> Play</button>
+            </div>
+          `;
+        } else if (type === 'Schedule') {
+          title = `Schedule · ${data.name}`;
+          const stopsHtml = (data.stopsList || []).map((s, i) => `<div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; border-bottom:1px dashed var(--line);"><span>${s.name}</span><span>${s.time}</span></div>`).join('');
+          body = `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <i class="fa-regular fa-clock"></i>
+              <span>${data.schedule}</span>
+            </div>
+            <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px; max-height:220px; overflow:auto;">
+              ${stopsHtml}
+            </div>
+          `;
+        } else if (type === 'Quote') {
+          title = `Quote · ${data.name}`;
+          body = `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+              <div style="width:48px; height:48px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center;">
+                <i class="fa-solid ${data.icon}"></i>
+              </div>
+              <div style="font-weight:700;">${data.name}</div>
+            </div>
+            <div class="form-group"><label>Package weight</label><select id="qWeight"><option value="1">Up to 1kg</option><option value="3">1–5kg</option><option value="7">5–10kg</option><option value="12">10–20kg</option></select></div>
+            <div class="form-group"><label>Distance (km)</label><input id="qDistance" type="number" min="1" value="5"></div>
+            <div class="booking-summary" id="qSummary"><div class="summary-row"><span>Base</span><span>${data.price}</span></div><div class="summary-total">Estimated: ${data.price}</div></div>
+            <button class="confirm-btn" id="qCalc">Get quote</button>
+          `;
+          setTimeout(() => {
+            const btn = document.getElementById('qCalc');
+            const dist = document.getElementById('qDistance');
+            const weight = document.getElementById('qWeight');
+            const sum = document.getElementById('qSummary');
+            if (btn && dist && weight && sum) {
+              btn.addEventListener('click', () => {
+                const base = parseFloat((data.price || '$5.00').replace('$','')) || 5;
+                const km = Math.max(1, parseFloat(dist.value) || 1);
+                const w = parseFloat(weight.value) || 1;
+                const est = (base + km * 0.5 + w * 0.8).toFixed(2);
+                sum.innerHTML = `<div class="summary-row"><span>Base</span><span>$${base.toFixed(2)}</span></div><div class="summary-row"><span>Distance</span><span>${km} km</span></div><div class="summary-row"><span>Weight</span><span>${w} kg</span></div><div class="summary-total">Estimated: $${est}</div>`;
+              });
+            }
+          }, 0);
+        } else if (type === 'Details') {
+          if (data.time) {
+            title = data.name;
+            const features = [];
+            if (data.wifi) features.push('WiFi');
+            if (data.ac) features.push('A/C');
+            if (data.bikeRack) features.push('Bike rack');
+            if (data.wheelchair) features.push('Wheelchair');
+            body = `
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                <div style="width:52px; height:52px; border-radius:50%; background:#ffffff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center;">
+                  <i class="fa-solid ${data.icon}"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-weight:700;">${data.name}</div>
+                  <div style="font-size:0.8rem; color:var(--muted);">${data.time} • ${data.stops}</div>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                ${features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
+              </div>
+              <div class="booking-summary"><div class="summary-row"><span>Schedule</span><span>${data.schedule}</span></div><div class="summary-row"><span>Fare</span><span>${data.fare}</span></div><div class="summary-row"><span>Distance</span><span>${data.distance}</span></div></div>
+              <div style="display:flex; gap:8px;">
+                <button class="route-btn outline" id="detailSchedule" style="flex:1;"><i class="fa-regular fa-clock"></i> Schedule</button>
+                <button class="route-btn primary" id="detailBook" style="flex:1;"><i class="fa-solid fa-ticket"></i> Book</button>
+              </div>
+            `;
+            setTimeout(() => {
+              document.getElementById('detailSchedule')?.addEventListener('click', () => openInfoModal('Schedule', data));
+              document.getElementById('detailBook')?.addEventListener('click', () => openBookingModal('Route', data));
+            }, 0);
+          } else {
+            title = data.name;
+            body = `
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                <div style="width:52px; height:52px; border-radius:50%; background:#ffffff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center;">
+                  <i class="fa-solid ${data.icon}"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-weight:700;">${data.name}</div>
+                  <div style="font-size:0.8rem; color:var(--muted);">${data.desc}</div>
+                </div>
+              </div>
+              <div class="booking-summary"><div class="summary-row"><span>Delivery time</span><span>${data.deliveryTime}</span></div><div class="summary-row"><span>Coverage</span><span>${data.coverage || 'City-wide'}</span></div><div class="summary-total">Starting ${data.price}</div></div>
+              <div style="display:flex; gap:8px;">
+                <button class="route-btn secondary" id="detailQuote" style="flex:1;"><i class="fa-solid fa-calculator"></i> Quote</button>
+                <button class="route-btn primary" id="detailBookCarrier" style="flex:1;"><i class="fa-solid fa-box"></i> Book</button>
+              </div>
+            `;
+            setTimeout(() => {
+              document.getElementById('detailQuote')?.addEventListener('click', () => openInfoModal('Quote', data));
+              document.getElementById('detailBookCarrier')?.addEventListener('click', () => openBookingModal('Carrier', data));
+            }, 0);
+          }
+        }
+        infoTitle.textContent = title;
+        infoBody.innerHTML = body;
+      }
+
+      closeInfo.addEventListener('click', () => infoModal.classList.remove('active'));
+      infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('active'); });
+
+      // Data and rendering (unchanged, using same data)
+      const CATEGORIES = [ { key:'all',label:'All',icon:'fa-layer-group' }, { key:'shopping',label:'Shopping',icon:'fa-bag-shopping' }, { key:'food',label:'Food',icon:'fa-utensils' }, { key:'entertainment',label:'Entertain',icon:'fa-film' }, { key:'services',label:'Services',icon:'fa-screwdriver-wrench' }, { key:'beauty',label:'Beauty',icon:'fa-spa' } ];
+      const PLACES = [
+        { id:1,category:'shopping',tag:'Fashion',name:'Urban Style',desc:'Designer collections',rating:4.8,reviews:'1.2k',distance:'0.2 mi',hours:'10–21',grad:['#b1c9f0','#d6e2f5'],image:'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop' },
+        { id:2,category:'shopping',tag:'Electronics',name:'Tech Haven',desc:'Premium gadgets',rating:4.9,reviews:'2.3k',distance:'0.1 mi',hours:'09–22',grad:['#a0b9e0','#cddef5'],image:'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=400&h=300&fit=crop' },
+        { id:3,category:'food',tag:'Food court',name:'Food Paradise',desc:'12+ cuisines',rating:4.7,reviews:'1.8k',distance:'0.3 mi',hours:'08–23',grad:['#f5d0b1','#f8e0c0'],image:'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop' },
+        { id:4,category:'entertainment',tag:'Cinema',name:'City Lights',desc:'IMAX, recliners',rating:4.6,reviews:'980',distance:'0.5 mi',hours:'11–00',grad:['#c0b9e0','#e0d9f5'],image:'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=300&fit=crop' },
+        { id:5,category:'food',tag:'Coffee',name:'Roast & Brew',desc:'Specialty coffee',rating:4.9,reviews:'740',distance:'0.15 mi',hours:'07–20',grad:['#e3d5b0','#f0e5cc'],image:'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=300&fit=crop' },
+        { id:6,category:'services',tag:'Cleaning',name:'Fresh&Go',desc:'Eco‑friendly laundry',rating:4.5,reviews:'320',distance:'0.4 mi',hours:'08–19',grad:['#b0e0d0','#d0f0e5'],image:'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&h=300&fit=crop' }
+      ];
+      const routeItems = [
+        { icon:'fa-bus',name:'CBD to Hillside',time:'18 min',stops:'6 stops',badge:'Frequent',schedule:'Every 15 min',fare:'$2.50',distance:'8.2 km',dailyRidership:'2.4k',onTimeRate:'96%',stopsList:[ { name:'City Hall',time:'0 min' },{ name:'Market Square',time:'3 min' },{ name:'University',time:'6 min' },{ name:'Shopping Mall',time:'9 min' },{ name:'Hospital',time:'12 min' },{ name:'Hillside',time:'18 min' } ],fareTypes:[ { type:'Adult',price:'$2.50' },{ type:'Student',price:'$1.80' },{ type:'Senior',price:'$1.50' } ],peakHours:['07:00-09:00','16:00-18:00'],wheelchair:true,bikeRack:true,wifi:true,ac:true,type:'express',image:'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=300&fit=crop' },
+        { icon:'fa-train',name:'City Centre – Nkulumane',time:'32 min',stops:'Express',badge:'Electric',schedule:'Every 30 min',fare:'$3.50',distance:'15.5 km',dailyRidership:'3.1k',onTimeRate:'98%',stopsList:[ { name:'Central Station',time:'0 min' },{ name:'Industrial Area',time:'12 min' },{ name:'Nkulumane Terminal',time:'32 min' } ],fareTypes:[ { type:'Adult',price:'$3.50' },{ type:'Student',price:'$2.50' },{ type:'Monthly Pass',price:'$45.00' } ],peakHours:['06:30-08:30','17:00-19:00'],wheelchair:true,bikeRack:false,wifi:true,ac:true,type:'express',image:'https://images.unsplash.com/photo-1474487548417-781cb71495f3?w=400&h=300&fit=crop' },
+        { icon:'fa-car',name:'Airport Shuttle',time:'25 min',stops:'Direct',badge:'Premium',schedule:'Hourly',fare:'$8.00',distance:'22 km',dailyRidership:'850',onTimeRate:'99%',stopsList:[ { name:'City Centre',time:'0 min' },{ name:'Airport',time:'25 min' } ],fareTypes:[ { type:'Adult',price:'$8.00' },{ type:'Child',price:'$4.00' },{ type:'Luggage',price:'$2.00' } ],peakHours:['05:00-07:00','18:00-20:00'],wheelchair:true,bikeRack:false,wifi:true,ac:true,type:'premium',image:'https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=400&h=300&fit=crop' },
+        { icon:'fa-bus',name:'Northend Loop',time:'22 min',stops:'8 stops',badge:'Regular',schedule:'Every 20 min',fare:'$2.00',distance:'9.8 km',dailyRidership:'1.8k',onTimeRate:'92%',stopsList:[ { name:'North Mall',time:'0 min' },{ name:'Residential',time:'4 min' },{ name:'Park',time:'7 min' },{ name:'School',time:'10 min' },{ name:'Community Center',time:'14 min' },{ name:'Library',time:'17 min' },{ name:'Sports Complex',time:'20 min' },{ name:'North Terminal',time:'22 min' } ],fareTypes:[ { type:'Adult',price:'$2.00' },{ type:'Student',price:'$1.50' },{ type:'Child',price:'$1.00' } ],peakHours:['07:30-09:00','15:30-17:30'],wheelchair:true,bikeRack:true,wifi:false,ac:true,type:'local',image:'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=400&h=300&fit=crop' },
+        { icon:'fa-train',name:'Bulawayo Express',time:'45 min',stops:'Limited',badge:'Express',schedule:'Peak hours only',fare:'$4.50',distance:'28 km',dailyRidership:'2.2k',onTimeRate:'97%',stopsList:[ { name:'Main Terminal',time:'0 min' },{ name:'Business District',time:'15 min' },{ name:'Industrial Park',time:'30 min' },{ name:'Bulawayo Central',time:'45 min' } ],fareTypes:[ { type:'Adult',price:'$4.50' },{ type:'Weekly Pass',price:'$28.00' },{ type:'Corporate',price:'$3.50' } ],peakHours:['07:00-09:00','16:30-18:30'],wheelchair:true,bikeRack:false,wifi:true,ac:true,type:'express',image:'https://images.unsplash.com/photo-1515162816999-a0c47dc5a5f3?w=400&h=300&fit=crop' },
+        { icon:'fa-bus',name:'Night Rider',time:'35 min',stops:'Night service',badge:'24h',schedule:'Every 40 min (night)',fare:'$3.00',distance:'14 km',dailyRidership:'950',onTimeRate:'94%',stopsList:[ { name:'Downtown',time:'0 min' },{ name:'Entertainment District',time:'8 min' },{ name:'Bar Street',time:'12 min' },{ name:'Club Zone',time:'16 min' },{ name:'Hotel Row',time:'22 min' },{ name:'Suburbs',time:'30 min' },{ name:'Terminal',time:'35 min' } ],fareTypes:[ { type:'Adult',price:'$3.00' },{ type:'Night Pass',price:'$5.00' } ],peakHours:['22:00-02:00'],wheelchair:false,bikeRack:false,wifi:false,ac:true,type:'night',image:'https://images.unsplash.com/photo-1547313986-4d565a7c60f1?w=400&h=300&fit=crop' }
+      ];
+      const carrierItems = [
+        { icon:'fa-truck',name:'SwiftLink',desc:'Courier & parcels',rating:4.8,reviews:'1.4k',features:['Same day','Trackable','Insurance','Weekend delivery'],price:'$5.99',deliveryTime:'1-2 days',coverage:'City-wide',volume:'50k+',satisfaction:'98%',onTime:'96%',badge:'Popular',premium:false,image:'https://images.unsplash.com/photo-1605791883922-13b8cf91b4e8?w=400&h=300&fit=crop' },
+        { icon:'fa-box',name:'MoveIt',desc:'Local deliveries',rating:4.6,reviews:'890',features:['Furniture','Assembly','Flexible','2 man crew'],price:'$8.50',deliveryTime:'2-4 hours',coverage:'Metro area',volume:'12k+',satisfaction:'95%',onTime:'93%',badge:'Fast',premium:false,image:'https://images.unsplash.com/photo-1553452118-621e1c8e4e9e?w=400&h=300&fit=crop' },
+        { icon:'fa-bicycle',name:'EcoRush',desc:'Green last‑mile',rating:4.9,reviews:'520',features:['Eco-friendly','Fast','Small items','Carbon neutral'],price:'$3.99',deliveryTime:'1 hour',coverage:'City center',volume:'8k+',satisfaction:'99%',onTime:'98%',badge:'Eco',premium:true,image:'https://images.unsplash.com/photo-1571066811602-716837d681de?w=400&h=300&fit=crop' },
+        { icon:'fa-van-shuttle',name:'CityHaul',desc:'Furniture & large',rating:4.5,reviews:'1.1k',features:['Large items','2 men crew','Packing','Disassembly'],price:'$15.00',deliveryTime:'Same day',coverage:'Regional',volume:'5k+',satisfaction:'94%',onTime:'92%',badge:'Heavy',premium:false,image:'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop' },
+        { icon:'fa-motorcycle',name:'SpeedX',desc:'Express courier',rating:4.7,reviews:'2.1k',features:['30 min pickup','Real-time tracking','24/7','SMS alerts'],price:'$7.99',deliveryTime:'30-60 min',coverage:'City-wide',volume:'25k+',satisfaction:'97%',onTime:'97%',badge:'Express',premium:true,image:'https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=400&h=300&fit=crop' }
+      ];
+      const trendingItems = [ { icon:'fa-bolt',title:'Fast food',subtitle:'13 places',image:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop' }, { icon:'fa-mask',title:'Spa week',subtitle:'8 deals',image:'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop' }, { icon:'fa-tag',title:'Flash sale',subtitle:'Up to 40%',image:'https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400&h=300&fit=crop' }, { icon:'fa-music',title:'Live music',subtitle:'5 venues',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop' } ];
+      const guideItems = [ { coverLabel:'Eat',name:'Foodie guide',meta:'62 spots',image:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop' }, { coverLabel:'Shop',name:'Best malls',meta:'24 places',image:'https://images.unsplash.com/photo-1513884923967-4b182ef167ab?w=400&h=300&fit=crop' }, { coverLabel:'Art',name:'Culture',meta:'15 galleries',image:'https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&h=300&fit=crop' }, { coverLabel:'Night',name:'Nightlife',meta:'18 bars',image:'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop' } ];
+      const curatedItems = [ { icon:'fa-umbrella-beach',title:'Weekend vibes',desc:'Rooftops & chill',image:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop' }, { icon:'fa-bicycle',title:'Cycling routes',desc:'5 scenic paths',image:'https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=400&h=300&fit=crop' }, { icon:'fa-dog',title:'Pet friendly',desc:'12 cafes & parks',image:'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=300&fit=crop' } ];
+      const reelItems = [
+        { title:'Street food tour', views:'12.3k', image:'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=500&h=800&fit=crop' },
+        { title:'Mall fashion drop', views:'8.9k', image:'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&h=800&fit=crop' },
+        { title:'Live buskers', views:'6.1k', image:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=800&fit=crop' },
+        { title:'Hidden cafe', views:'9.4k', image:'https://images.unsplash.com/photo-1498804103079-a6351b050096?w=500&h=800&fit=crop' }
+      ];
+
+      // DOM elements
+      const chipContainer = document.getElementById('chipContainer');
+      const cardsContainer = document.getElementById('cardsContainer');
+      const featuredMeta = document.getElementById('featuredMeta');
+      const searchInput = document.getElementById('searchInput');
+      const toastEl = document.getElementById('toast');
+      const routeContainer = document.getElementById('routeContainer');
+      const carrierContainer = document.getElementById('carrierContainer');
+      const routesDetailContainer = document.getElementById('routesDetailContainer');
+      const carriersDetailContainer = document.getElementById('carriersDetailContainer');
+      
+      const trendingContainerHome = document.getElementById('trendingContainerHome');
+      const guidesContainerHome = document.getElementById('guidesContainerHome');
+      const curatedContainerHome = document.getElementById('curatedContainerHome');
+      const reelContainerHome = document.getElementById('reelContainerHome');
+
+      document.getElementById('chatSupportBtn')?.addEventListener('click', () => showToast('Opening WhatsApp chat...'));
+      document.getElementById('trackBtn')?.addEventListener('click', () => showToast('Tracking number required'));
+      document.getElementById('submitPostBtn')?.addEventListener('click', () => {
+        const ta = document.getElementById('postTextarea');
+        const feed = document.getElementById('postsFeed');
+        if (ta && feed) {
+          const content = ta.value.trim();
+          if (content) {
+            const card = document.createElement('div');
+            card.style.background = 'white';
+            card.style.border = '1px solid var(--line)';
+            card.style.borderRadius = '12px';
+            card.style.padding = '12px';
+            card.innerHTML = `<div style="font-size:0.85rem; color:var(--muted); margin-bottom:6px;">Just now</div><div style="font-size:1rem;">${content.replace(/</g,'&lt;')}</div>`;
+            feed.prepend(card);
+            ta.value = '';
+            showToast('Posted');
+          } else {
+            showToast('Write something to post');
+          }
+        }
+      });
+
+      let activeCategory = 'all';
+      let places = [...PLACES];
+
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(window.toastTimer);
+        window.toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1500);
+      }
+
+      function stars(rating) { return '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)); }
+
+      function getFiltered() {
+        const query = searchInput.value.trim().toLowerCase();
+        return places.filter(p => (activeCategory === 'all' || p.category === activeCategory) && (!query || p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query) || p.tag.toLowerCase().includes(query)));
+      }
+
+      function updateMeta(filtered) {
+        if (filtered.length === 0) featuredMeta.textContent = 'no matches';
+        else { const avg = (filtered.reduce((acc, p) => acc + p.rating, 0) / filtered.length).toFixed(1); featuredMeta.textContent = `${filtered.length} spots · avg ${avg}★`; }
+      }
+
+      function renderChips() {
+        chipContainer.innerHTML = '';
+        CATEGORIES.forEach(c => {
+          const btn = document.createElement('button');
+          btn.className = `chip ${c.key === activeCategory ? 'active' : ''}`;
+          btn.innerHTML = `<i class="fa-solid ${c.icon}"></i><span>${c.label}</span>`;
+          btn.addEventListener('click', () => { activeCategory = c.key; renderChips(); renderCards(); });
+          chipContainer.appendChild(btn);
+        });
+      }
+
+      function renderCards() {
+        const filtered = getFiltered();
+        updateMeta(filtered);
+        cardsContainer.innerHTML = '';
+        filtered.forEach(p => {
+          const card = document.createElement('article'); card.className = 'place-card'; card.tabIndex = 0;
+          let catIcon = 'fa-location-dot';
+          if (p.category === 'food') catIcon = 'fa-utensils';
+          else if (p.category === 'shopping') catIcon = 'fa-bag-shopping';
+          else if (p.category === 'entertainment') catIcon = 'fa-film';
+          else if (p.category === 'services') catIcon = 'fa-screwdriver-wrench';
+          else if (p.category === 'beauty') catIcon = 'fa-spa';
+          card.innerHTML = `<div class="card-thumb" style="background:linear-gradient(145deg, ${p.grad[0]}, ${p.grad[1]}), url('${p.image}'); background-blend-mode:overlay;"><div class="card-tag"><i class="fa-solid ${catIcon}"></i> ${p.tag}</div></div><div class="card-body"><p class="place-name">${p.name}</p><p class="place-desc">${p.desc}</p><div class="rating-row"><span class="stars">${stars(p.rating)}</span><span>${p.rating.toFixed(1)}</span><span style="color:var(--muted);">(${p.reviews})</span></div></div><div class="card-footer"><div class="info-badge"><i class="fa-solid fa-location-dot"></i> ${p.distance}</div><div class="info-badge"><i class="fa-regular fa-clock"></i> ${p.hours}</div></div>`;
+          card.addEventListener('click', () => openInfoModal('Place', p));
+          cardsContainer.appendChild(card);
+        });
+      }
+
+      function renderRoute() {
+        if (!routeContainer) return;
+        routeContainer.innerHTML = '';
+        routeItems.slice(0, 3).forEach(r => {
+          const div = document.createElement('div'); div.className = 'route-card';
+          div.innerHTML = `
+            <div class="route-header"><div class="route-icon" style="background-image: url('${r.image}'); background-size: cover; background-position: center;"></div><div class="route-details"><div class="route-title">${r.name}</div><div class="route-meta"><span><i class="fa-regular fa-clock"></i> ${r.time}</span><span><i class="fa-solid fa-location-dot"></i> ${r.stops}</span></div></div><div class="route-badge">${r.badge}</div></div>
+            <div class="route-schedule"><i class="fa-regular fa-calendar"></i> ${r.schedule} <span style="margin-left: auto;"><i class="fa-solid fa-tag"></i> ${r.fare}</span></div>
+            <div class="route-stats"><div class="stat-item"><div class="stat-value">${r.dailyRidership}</div><div class="stat-label">Daily riders</div></div><div class="stat-item"><div class="stat-value">${r.onTimeRate}</div><div class="stat-label">On time</div></div><div class="stat-item"><div class="stat-value">${r.distance}</div><div class="stat-label">Distance</div></div></div>
+            <div class="route-actions"><button class="route-btn secondary view-route"><i class="fa-regular fa-eye"></i> Details</button><button class="route-btn primary book-route"><i class="fa-solid fa-ticket"></i> Book</button></div>
+          `;
+          div.querySelector('.view-route').addEventListener('click', (e) => { e.stopPropagation(); openInfoModal('Details', r); });
+          div.querySelector('.book-route').addEventListener('click', (e) => { e.stopPropagation(); openBookingModal('Route', r); });
+          routeContainer.appendChild(div);
+        });
+      }
+
+      function renderAllRoutes() {
+        if (!routesDetailContainer) return;
+        routesDetailContainer.innerHTML = '';
+        routeItems.forEach(r => {
+          const div = document.createElement('div'); div.className = 'route-card';
+          const stopsHtml = r.stopsList.map((stop, index) => `<div class="stop-item"><div class="stop-dot ${index === 0 ? 'start' : (index === r.stopsList.length - 1 ? 'end' : '')}"></div><span class="stop-name">${stop.name}</span><span class="stop-time">${stop.time}</span></div>`).join('');
+          const fareHtml = r.fareTypes.map(f => `<div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px;"><span>${f.type}</span><span style="font-weight: 600;">${f.price}</span></div>`).join('');
+          const features = []; if (r.wheelchair) features.push('<i class="fa-solid fa-wheelchair" title="Wheelchair accessible"></i>'); if (r.bikeRack) features.push('<i class="fa-solid fa-bicycle" title="Bike rack"></i>'); if (r.wifi) features.push('<i class="fa-solid fa-wifi" title="WiFi"></i>'); if (r.ac) features.push('<i class="fa-solid fa-snowflake" title="Air conditioned"></i>');
+          div.innerHTML = `
+            <div class="route-header"><div class="route-icon" style="background-image: url('${r.image}'); background-size: cover; background-position: center;"></div><div class="route-details"><div class="route-title">${r.name}</div><div class="route-meta"><span><i class="fa-regular fa-clock"></i> ${r.time}</span><span><i class="fa-solid fa-location-dot"></i> ${r.stops}</span><span><i class="fa-solid fa-ruler"></i> ${r.distance}</span></div></div><div class="route-badge">${r.badge}</div></div>
+            <div class="route-stats"><div class="stat-item"><div class="stat-value">${r.dailyRidership}</div><div class="stat-label">Daily riders</div></div><div class="stat-item"><div class="stat-value">${r.onTimeRate}</div><div class="stat-label">On time</div></div><div class="stat-item"><div class="stat-value">${r.distance}</div><div class="stat-label">Distance</div></div></div>
+            <div style="display: flex; gap: 8px; align-items: center; padding: 8px 0;"><span style="font-weight: 600; font-size: 0.8rem;">Features:</span> ${features.map(f => `<span style="color: var(--primary);">${f}</span>`).join('')}</div>
+            <div class="route-schedule"><i class="fa-regular fa-clock"></i> Schedule: ${r.schedule}</div>
+            <div class="route-schedule"><i class="fa-regular fa-sun"></i> Peak hours: ${r.peakHours.join(', ')}</div>
+            <div class="route-stops-container"><div class="route-stops-title"><i class="fa-solid fa-map-pin"></i> Stops</div><div class="route-stops">${stopsHtml}</div></div>
+            <div style="background: #f1f5f9; border-radius: 16px; padding: 12px;"><div style="font-weight: 600; margin-bottom: 8px; font-size: 0.85rem;">Fare options</div>${fareHtml}</div>
+            <div class="route-actions"><button class="route-btn secondary save-route"><i class="fa-regular fa-bookmark"></i> Save</button><button class="route-btn outline schedule-route"><i class="fa-regular fa-clock"></i> Schedule</button><button class="route-btn primary book-route"><i class="fa-solid fa-ticket"></i> Book</button></div>
+          `;
+          div.querySelector('.save-route')?.addEventListener('click', (e) => { e.stopPropagation(); showToast(`Route saved: ${r.name}`); });
+          div.querySelector('.schedule-route')?.addEventListener('click', (e) => { e.stopPropagation(); openInfoModal('Schedule', r); });
+          div.querySelector('.book-route')?.addEventListener('click', (e) => { e.stopPropagation(); openBookingModal('Route', r); });
+          routesDetailContainer.appendChild(div);
+        });
+      }
+
+      function renderCarrier() {
+        if (!carrierContainer) return;
+        carrierContainer.innerHTML = '';
+        const wrapper = document.createElement('div'); wrapper.className = 'carrier-row';
+        carrierItems.slice(0, 3).forEach(c => {
+          const card = document.createElement('div'); card.className = `carrier-card ${c.premium ? 'premium' : ''}`;
+          card.innerHTML = `
+            <div class="carrier-header"><div class="carrier-icon" style="background-image: url('${c.image}'); background-size: cover; background-position: center;"></div><div class="carrier-info"><div class="carrier-name">${c.name}</div><div class="carrier-desc">${c.desc}</div></div>${c.badge ? `<div class="carrier-badge">${c.badge}</div>` : ''}</div>
+            <div class="carrier-rating"><span class="stars">${'★'.repeat(Math.floor(c.rating))}${c.rating % 1 ? '½' : ''}</span><span>${c.rating}</span><span class="reviews">(${c.reviews})</span></div>
+            <div class="carrier-features">${c.features.slice(0, 3).map(f => `<span class="feature-tag">${f}</span>`).join('')}</div>
+            <div class="carrier-pricing"><span class="price">${c.price}</span><span class="delivery-time"><i class="fa-regular fa-clock"></i> ${c.deliveryTime}</span></div>
+            <div class="carrier-actions"><button class="carrier-btn secondary view-carrier"><i class="fa-regular fa-eye"></i> Details</button><button class="carrier-btn primary book-carrier"><i class="fa-solid fa-box"></i> Book</button></div>
+          `;
+          card.querySelector('.view-carrier')?.addEventListener('click', (e) => { e.stopPropagation(); openInfoModal('Details', c); });
+          card.querySelector('.book-carrier')?.addEventListener('click', (e) => { e.stopPropagation(); openBookingModal('Carrier', c); });
+          wrapper.appendChild(card);
+        });
+        carrierContainer.appendChild(wrapper);
+      }
+
+      function renderAllCarriers() {
+        if (!carriersDetailContainer) return;
+        carriersDetailContainer.innerHTML = '';
+        carrierItems.forEach(c => {
+          const card = document.createElement('div'); card.className = `carrier-card ${c.premium ? 'premium' : ''}`;
+          const featureTags = c.features.map(f => `<span class="feature-tag">${f}</span>`).join('');
+          card.innerHTML = `
+            <div class="carrier-header"><div class="carrier-icon" style="background-image: url('${c.image}'); background-size: cover; background-position: center;"></div><div class="carrier-info"><div class="carrier-name">${c.name}</div><div class="carrier-desc">${c.desc}</div></div>${c.badge ? `<div class="carrier-badge">${c.badge}</div>` : ''}</div>
+            <div class="carrier-rating"><span class="stars">${'★'.repeat(Math.floor(c.rating))}${c.rating % 1 ? '½' : ''}</span><span>${c.rating}</span><span class="reviews">(${c.reviews} reviews)</span></div>
+            <div class="carrier-features">${featureTags}</div>
+            <div class="carrier-stats"><div class="carrier-stat"><div class="carrier-stat-value">${c.volume}</div><div class="carrier-stat-label">Deliveries</div></div><div class="carrier-stat"><div class="carrier-stat-value">${c.satisfaction}</div><div class="carrier-stat-label">Satisfaction</div></div><div class="carrier-stat"><div class="carrier-stat-value">${c.onTime}</div><div class="carrier-stat-label">On time</div></div></div>
+            <div class="carrier-pricing"><div><span class="price">${c.price}</span> <small>starting</small></div><span class="delivery-time"><i class="fa-regular fa-clock"></i> ${c.deliveryTime}</span></div>
+            <div class="carrier-coverage"><i class="fa-solid fa-location-dot"></i> Coverage: ${c.coverage} <span class="coverage-badge">${c.coverage.split(' ')[0]}</span></div>
+            <div class="carrier-actions"><button class="carrier-btn secondary save-carrier"><i class="fa-regular fa-bookmark"></i> Save</button><button class="carrier-btn secondary quote-carrier"><i class="fa-solid fa-calculator"></i> Quote</button><button class="carrier-btn primary book-carrier"><i class="fa-solid fa-box"></i> Book</button></div>
+          `;
+          card.querySelector('.save-carrier')?.addEventListener('click', (e) => { e.stopPropagation(); showToast(`Carrier saved: ${c.name}`); });
+          card.querySelector('.quote-carrier')?.addEventListener('click', (e) => { e.stopPropagation(); openInfoModal('Quote', c); });
+          card.querySelector('.book-carrier')?.addEventListener('click', (e) => { e.stopPropagation(); openBookingModal('Carrier', c); });
+          carriersDetailContainer.appendChild(card);
+        });
+      }
+
+      function renderOtherSections() {
+        if (trendingContainerHome) {
+          trendingContainerHome.innerHTML = '';
+          trendingItems.forEach(t => {
+            const div = document.createElement('div'); div.className = 'trend-item';
+            div.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url('${t.image}')`;
+            div.style.backgroundSize = 'cover'; div.style.backgroundPosition = 'center';
+            div.innerHTML = `<div class="trend-icon" style="background: rgba(255,255,255,0.9);"><i class="fa-solid ${t.icon}"></i></div><div class="trend-title">${t.title}</div><div class="trend-sub">${t.subtitle}</div>`;
+            div.addEventListener('click', () => openInfoModal('Trend', t));
+            trendingContainerHome.appendChild(div);
+          });
+        }
+        
+        if (guidesContainerHome) {
+          guidesContainerHome.innerHTML = '';
+          guideItems.forEach(g => {
+            const card = document.createElement('div'); card.className = 'guide-card';
+            let gi = 'fa-book-open';
+            if (g.coverLabel === 'Eat') gi = 'fa-utensils';
+            else if (g.coverLabel === 'Shop') gi = 'fa-bag-shopping';
+            else if (g.coverLabel === 'Art') gi = 'fa-palette';
+            else if (g.coverLabel === 'Night') gi = 'fa-moon';
+            card.innerHTML = `<div class="guide-cover" style="background-image: url('${g.image}');"><span class="guide-label"><i class="fa-solid ${gi}"></i> ${g.coverLabel}</span></div><div class="guide-info"><div class="guide-name">${g.name}</div><div class="guide-meta">${g.meta}</div></div>`;
+            card.addEventListener('click', () => openInfoModal('Guide', g));
+            guidesContainerHome.appendChild(card);
+          });
+        }
+        
+        if (reelContainerHome) {
+          reelContainerHome.innerHTML = '';
+          reelItems.forEach(r => {
+            const card = document.createElement('div'); card.className = 'reel-card';
+            card.style.backgroundImage = `url('${r.image}')`;
+            card.innerHTML = `<div class="reel-overlay"></div><div class="reel-play"><i class="fa-solid fa-play"></i></div><div class="reel-meta"><div class="reel-title">${r.title}</div><div class="reel-sub">${r.views} views</div></div>`;
+            card.addEventListener('click', () => openInfoModal('Reel', r));
+            reelContainerHome.appendChild(card);
+          });
+        }
+        
+        if (curatedContainerHome) {
+          curatedContainerHome.innerHTML = '';
+          curatedItems.forEach(c => {
+            const div = document.createElement('div'); div.className = 'curated-item';
+            div.style.backgroundImage = `linear-gradient(145deg, rgba(226,234,252,0.8), rgba(240,245,255,0.8)), url('${c.image}')`;
+            div.style.backgroundSize = 'cover'; div.style.backgroundPosition = 'center';
+            div.innerHTML = `<div class="curated-icon" style="background: rgba(255,255,255,0.9);"><i class="fa-solid ${c.icon}"></i></div><div class="curated-text"><div class="curated-title">${c.title}</div><div class="curated-desc">${c.desc}</div></div>`;
+            div.addEventListener('click', () => openInfoModal('Curated', c));
+            curatedContainerHome.appendChild(div);
+          });
+        }
+      }
+
+      document.getElementById('routeMoreBtn')?.addEventListener('click', () => showSection('routes'));
+      document.getElementById('carrierMoreBtn')?.addEventListener('click', () => showSection('carriers'));
+      
+      document.getElementById('trendingMoreHome')?.addEventListener('click', () => showToast('Trending → all'));
+      document.getElementById('guidesMoreHome')?.addEventListener('click', () => showToast('All city guides'));
+      document.getElementById('reelsMoreHome')?.addEventListener('click', () => showToast('Reels'));
+      document.getElementById('curatedMoreHome')?.addEventListener('click', () => showToast('Explore curated'));
+      
+      document.getElementById('bookmarkBtn').addEventListener('click', () => showToast('Bookmarks'));
+      document.getElementById('profileBtn').addEventListener('click', () => showToast('Profile'));
+      document.getElementById('shuffleBtn').addEventListener('click', () => { places = places.map(v => ({ v, sort: Math.random() })).sort((a,b) => a.sort - b.sort).map(o => o.v); renderCards(); showToast('shuffled'); });
+      document.getElementById('browseAllBtn').addEventListener('click', () => { activeCategory = 'all'; renderChips(); renderCards(); showToast('All places'); });
+      document.getElementById('viewAllBtn').addEventListener('click', () => { showToast(`Viewing ${getFiltered().length} places`); });
+      searchInput.addEventListener('input', renderCards);
+
+      renderChips(); renderCards(); renderRoute(); renderAllRoutes(); renderCarrier(); renderAllCarriers(); renderOtherSections();
+    })();
+  </script>
+</body>
+</html>

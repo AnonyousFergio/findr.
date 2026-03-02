@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
-  <title>Findr · marketplace</title>
+  <title>findr · marketplace</title>
   <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <!-- Google Font: Pacifico + Inter -->
@@ -162,6 +162,7 @@
       transform: translateY(2px);
       white-space: nowrap;
       padding-bottom: 6px;
+      text-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 18px rgba(202,166,223,0.4), 0 0 28px rgba(165,177,245,0.3);
     }
     .brand-container {
       display: flex;
@@ -169,7 +170,7 @@
       line-height: 1.2;
     }
     .marketplace-badge {
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       font-family: 'Inter', sans-serif;
       font-weight: 500;
       padding: 2px 8px;
@@ -689,6 +690,92 @@
     .curated-text .curated-title { font-weight: 700; font-size: 0.9rem; }
     .curated-text .curated-desc { font-size: 0.65rem; color: var(--muted); }
 
+    .stories-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 6px 2px 14px 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .stories-row::-webkit-scrollbar { display: none; }
+    .story {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 70px;
+    }
+    .story-ring {
+      width: 62px;
+      height: 62px;
+      padding: 2px;
+      border-radius: 50%;
+      background: conic-gradient(#f58529, #feda77, #dd2a7b, #8134af, #515bd4, #f58529);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .story-avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      border: 3px solid white;
+    }
+    .story-name {
+      font-size: 0.7rem;
+      color: var(--muted);
+      max-width: 70px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+
+    .ig-post {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    }
+    .ig-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+    }
+    .ig-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #f6b3d1;
+    }
+    .ig-username { font-weight: 700; font-size: 0.85rem; }
+    .ig-time { font-size: 0.7rem; color: var(--muted); }
+    .ig-media {
+      width: 100%;
+      height: 300px;
+      background-size: cover;
+      background-position: center;
+    }
+    .ig-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      font-size: 1.2rem;
+    }
+    .ig-actions-left, .ig-actions-right { display: flex; align-items: center; gap: 12px; }
+    .ig-likes { padding: 0 10px; font-weight: 700; font-size: 0.85rem; }
+    .ig-caption { padding: 0 10px 10px; font-size: 0.9rem; }
+
     .reel-row {
       display: flex;
       gap: 12px;
@@ -709,6 +796,12 @@
       background-position: center;
       position: relative;
       cursor: pointer;
+    }
+    .reel-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .reel-overlay {
       position: absolute;
@@ -742,6 +835,90 @@
       border: 1px solid rgba(255,255,255,0.7);
       color: var(--primary);
       font-size: 1rem;
+    }
+
+    .reel-viewer {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+    }
+    .reel-viewer.active { display: flex; }
+    .reel-track {
+      flex: 1;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .reel-slide {
+      position: relative;
+      height: 100vh;
+      width: 100%;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+    .reel-slide video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .reel-ui {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 2;
+    }
+    .reel-ui .btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.6);
+      font-size: 1.1rem;
+      color: #0f172a;
+    }
+    .reel-side {
+      position: absolute;
+      right: 10px;
+      bottom: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 2;
+    }
+    .reel-side .btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.6);
+      color: #0f172a;
+      font-size: 1.1rem;
+    }
+    .reel-caption {
+      position: absolute;
+      left: 16px;
+      bottom: 20px;
+      right: 80px;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      z-index: 2;
+      font-size: 0.9rem;
     }
 
     /* ===== ROUTE CARD ===== */
@@ -1220,6 +1397,15 @@
         <div id="infoBody"></div>
       </div>
     </div>
+    <div class="reel-viewer" id="reelViewer">
+      <div class="reel-ui">
+        <div class="btn" id="reelClose"><i class="fa-solid fa-times"></i></div>
+        <div style="display:flex; gap:8px;">
+          <div class="btn" id="reelMute"><i class="fa-solid fa-volume-xmark"></i></div>
+        </div>
+      </div>
+      <div class="reel-track" id="reelTrack"></div>
+    </div>
 
     <!-- bottom sheet -->
     <div class="bottom-sheet" id="bottomSheet">
@@ -1432,24 +1618,14 @@
           <!-- POST SECTION -->
           <div id="postSection" class="section">
             <div style="padding: 20px 0;">
-              <div style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                  <div style="width:44px; height:44px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:var(--primary);">
-                    <i class="fa-solid fa-pen"></i>
-                  </div>
-                  <div style="font-weight:700;">Create Post</div>
-                </div>
-                <textarea id="postTextarea" placeholder="Share an update..." style="width:100%; min-height:100px; border:1px solid var(--line); border-radius:12px; padding:12px; resize:vertical;"></textarea>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-                  <div style="display:flex; gap:8px;">
-                    <button id="attachImage" class="carrier-btn secondary" style="padding:8px 12px;"><i class="fa-regular fa-image"></i> Image</button>
-                    <button id="attachLocation" class="carrier-btn secondary" style="padding:8px 12px;"><i class="fa-solid fa-location-dot"></i> Location</button>
-                  </div>
-                  <button id="submitPostBtn" class="carrier-btn primary" style="padding:10px 16px; border-radius:20px;"><i class="fa-solid fa-paper-plane"></i> Post</button>
-                </div>
+              <div class="stories-row" id="storiesRow"></div>
+              <div style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <div style="width:42px; height:42px; border-radius:50%; background:#f1f5f9; background-image:url('https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&h=200&fit=crop'); background-size:cover; background-position:center;"></div>
+                <textarea id="postTextarea" placeholder="Write a caption..." style="flex:1; min-height:44px; max-height:120px; border:1px solid var(--line); border-radius:22px; padding:10px 14px; resize:vertical;"></textarea>
+                <button id="submitPostBtn" class="carrier-btn primary" style="padding:10px 14px; border-radius:20px;"><i class="fa-solid fa-plus"></i></button>
               </div>
               <div style="margin-top:16px;">
-                <div style="font-weight:700; margin-bottom:8px;">Recent Posts</div>
+                <div style="font-weight:700; margin-bottom:8px;">Feed</div>
                 <div id="postsFeed" style="display:flex; flex-direction:column; gap:12px;"></div>
               </div>
             </div>
@@ -1842,6 +2018,91 @@
       closeInfo.addEventListener('click', () => infoModal.classList.remove('active'));
       infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('active'); });
 
+      let reelObserver = null;
+      function openReelViewer(startIndex) {
+        const viewer = document.getElementById('reelViewer');
+        const track = document.getElementById('reelTrack');
+        const muteBtn = document.getElementById('reelMute');
+        if (!viewer || !track) return;
+        viewer.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        track.innerHTML = '';
+        REEL_FEED.forEach((r, i) => {
+          const slide = document.createElement('div'); slide.className = 'reel-slide';
+          const vid = document.createElement('video');
+          vid.src = typeof r.video === 'string' ? r.video : URL.createObjectURL(r.video);
+          vid.poster = r.poster || '';
+          vid.playsInline = true;
+          vid.muted = true;
+          vid.loop = true;
+          vid.preload = 'metadata';
+          slide.appendChild(vid);
+          const side = document.createElement('div'); side.className = 'reel-side';
+          side.innerHTML = `<div class="btn"><i class="fa-regular fa-heart"></i></div><div class="btn"><i class="fa-regular fa-comment"></i></div><div class="btn"><i class="fa-regular fa-paper-plane"></i></div>`;
+          slide.appendChild(side);
+          const cap = document.createElement('div'); cap.className = 'reel-caption';
+          cap.innerHTML = `<div style="font-weight:700; margin-bottom:4px;">${r.title}</div><div style="opacity:0.9;">${r.views || ''} ${r.views ? 'views' : ''}</div>`;
+          slide.appendChild(cap);
+          track.appendChild(slide);
+        });
+        const slides = Array.from(track.querySelectorAll('.reel-slide'));
+        if (slides[startIndex]) slides[startIndex].scrollIntoView({ block: 'start' });
+        if (reelObserver) reelObserver.disconnect();
+        reelObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            const v = entry.target.querySelector('video');
+            if (!v) return;
+            if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+              v.play().catch(()=>{});
+            } else {
+              v.pause();
+            }
+          });
+        }, { threshold: [0, 0.6, 1] });
+        slides.forEach(s => reelObserver.observe(s));
+        const closeBtn = document.getElementById('reelClose');
+        closeBtn.onclick = () => {
+          viewer.classList.remove('active');
+          document.body.style.overflow = '';
+          const vids = track.querySelectorAll('video');
+          vids.forEach(v => { v.pause(); v.src = v.src; });
+          reelObserver && reelObserver.disconnect();
+        };
+        muteBtn.onclick = () => {
+          const vids = track.querySelectorAll('video');
+          const anyUnmuted = Array.from(vids).some(v => !v.muted);
+          const targetMuted = anyUnmuted ? true : false;
+          vids.forEach(v => v.muted = targetMuted);
+          muteBtn.innerHTML = targetMuted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+        };
+        viewer.addEventListener('click', e => { if (e.target === viewer) closeBtn.onclick(); });
+        track.addEventListener('click', e => {
+          const v = e.target.closest('.reel-slide')?.querySelector('video');
+          if (!v) return;
+          if (v.paused) v.play(); else v.pause();
+        });
+        document.addEventListener('keydown', onReelKeys);
+        function onReelKeys(e) {
+          if (!viewer.classList.contains('active')) { document.removeEventListener('keydown', onReelKeys); return; }
+          if (e.key === 'Escape') closeBtn.onclick();
+          if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+            track.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
+          }
+          if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+            track.scrollBy({ top: -window.innerHeight, behavior: 'smooth' });
+          }
+          if (e.key === ' ') {
+            const current = Array.from(slides).find(s => {
+              const rect = s.getBoundingClientRect();
+              return rect.top >= 0 && rect.top < window.innerHeight * 0.4;
+            }) || slides[0];
+            const v = current.querySelector('video');
+            if (v) { if (v.paused) v.play(); else v.pause(); }
+            e.preventDefault();
+          }
+        }
+      }
+
       // Data and rendering (unchanged, using same data)
       const CATEGORIES = [ { key:'all',label:'All',icon:'fa-layer-group' }, { key:'shopping',label:'Shopping',icon:'fa-bag-shopping' }, { key:'food',label:'Food',icon:'fa-utensils' }, { key:'entertainment',label:'Entertain',icon:'fa-film' }, { key:'services',label:'Services',icon:'fa-screwdriver-wrench' }, { key:'beauty',label:'Beauty',icon:'fa-spa' } ];
       const PLACES = [
@@ -1870,11 +2131,23 @@
       const trendingItems = [ { icon:'fa-bolt',title:'Fast food',subtitle:'13 places',image:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop' }, { icon:'fa-mask',title:'Spa week',subtitle:'8 deals',image:'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop' }, { icon:'fa-tag',title:'Flash sale',subtitle:'Up to 40%',image:'https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400&h=300&fit=crop' }, { icon:'fa-music',title:'Live music',subtitle:'5 venues',image:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop' } ];
       const guideItems = [ { coverLabel:'Eat',name:'Foodie guide',meta:'62 spots',image:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop' }, { coverLabel:'Shop',name:'Best malls',meta:'24 places',image:'https://images.unsplash.com/photo-1513884923967-4b182ef167ab?w=400&h=300&fit=crop' }, { coverLabel:'Art',name:'Culture',meta:'15 galleries',image:'https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&h=300&fit=crop' }, { coverLabel:'Night',name:'Nightlife',meta:'18 bars',image:'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop' } ];
       const curatedItems = [ { icon:'fa-umbrella-beach',title:'Weekend vibes',desc:'Rooftops & chill',image:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop' }, { icon:'fa-bicycle',title:'Cycling routes',desc:'5 scenic paths',image:'https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=400&h=300&fit=crop' }, { icon:'fa-dog',title:'Pet friendly',desc:'12 cafes & parks',image:'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=300&fit=crop' } ];
-      const reelItems = [
-        { title:'Street food tour', views:'12.3k', image:'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=500&h=800&fit=crop' },
-        { title:'Mall fashion drop', views:'8.9k', image:'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&h=800&fit=crop' },
-        { title:'Live buskers', views:'6.1k', image:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=800&fit=crop' },
-        { title:'Hidden cafe', views:'9.4k', image:'https://images.unsplash.com/photo-1498804103079-a6351b050096?w=500&h=800&fit=crop' }
+      const SEED_REELS = [
+        { title:'Street food tour', views:'12.3k', video:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', poster:'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=500&h=800&fit=crop', createdAt: Date.now() - 40000 },
+        { title:'Mall fashion drop', views:'8.9k', video:'https://www.w3schools.com/html/mov_bbb.mp4', poster:'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&h=800&fit=crop', createdAt: Date.now() - 30000 },
+        { title:'Live buskers', views:'6.1k', video:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', poster:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=800&fit=crop', createdAt: Date.now() - 20000 },
+        { title:'Hidden cafe', views:'9.4k', video:'https://www.w3schools.com/html/mov_bbb.mp4', poster:'https://images.unsplash.com/photo-1498804103079-a6351b050096?w=500&h=800&fit=crop', createdAt: Date.now() - 10000 }
+      ];
+      let REEL_FEED = [];
+      const STORIES = [
+        { user:'you', avatar:'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&h=200&fit=crop' },
+        { user:'alex', avatar:'https://images.unsplash.com/photo-1544006659-f0b21884ce1d?w=200&h=200&fit=crop' },
+        { user:'mila', avatar:'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop' },
+        { user:'josh', avatar:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=200&h=200&fit=crop' },
+        { user:'tari', avatar:'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=200&h=200&fit=crop' }
+      ];
+      let POSTS = [
+        { user:'alex', avatar:STORIES[1].avatar, time:'2h', image:'https://images.unsplash.com/photo-1511165403365-9d1709f3e45d?w=800&h=800&fit=crop', likes:482, caption:'Morning coffee run' },
+        { user:'mila', avatar:STORIES[2].avatar, time:'4h', image:'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=800&fit=crop', likes:971, caption:'Lunch spot vibes' }
       ];
 
       // DOM elements
@@ -1897,19 +2170,13 @@
       document.getElementById('trackBtn')?.addEventListener('click', () => showToast('Tracking number required'));
       document.getElementById('submitPostBtn')?.addEventListener('click', () => {
         const ta = document.getElementById('postTextarea');
-        const feed = document.getElementById('postsFeed');
-        if (ta && feed) {
+        if (ta) {
           const content = ta.value.trim();
           if (content) {
-            const card = document.createElement('div');
-            card.style.background = 'white';
-            card.style.border = '1px solid var(--line)';
-            card.style.borderRadius = '12px';
-            card.style.padding = '12px';
-            card.innerHTML = `<div style="font-size:0.85rem; color:var(--muted); margin-bottom:6px;">Just now</div><div style="font-size:1rem;">${content.replace(/</g,'&lt;')}</div>`;
-            feed.prepend(card);
+            POSTS.unshift({ user:'you', avatar:STORIES[0].avatar, time:'Just now', image:'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&h=800&fit=crop', likes:0, caption:content.replace(/</g,'&lt;') });
             ta.value = '';
-            showToast('Posted');
+            renderPosts();
+            showToast('Posted to feed');
           } else {
             showToast('Write something to post');
           }
@@ -2079,13 +2346,24 @@
           });
         }
         
+        const storiesRow = document.getElementById('storiesRow');
+        if (storiesRow) {
+          storiesRow.innerHTML = '';
+          STORIES.forEach(s => {
+            const el = document.createElement('div'); el.className = 'story';
+            el.innerHTML = `<div class="story-ring"><div class="story-avatar" style="background-image:url('${s.avatar}')"></div></div><div class="story-name">${s.user}</div>`;
+            storiesRow.appendChild(el);
+          });
+        }
+        
         if (reelContainerHome) {
           reelContainerHome.innerHTML = '';
-          reelItems.forEach(r => {
+          REEL_FEED.forEach((r, idx) => {
             const card = document.createElement('div'); card.className = 'reel-card';
-            card.style.backgroundImage = `url('${r.image}')`;
-            card.innerHTML = `<div class="reel-overlay"></div><div class="reel-play"><i class="fa-solid fa-play"></i></div><div class="reel-meta"><div class="reel-title">${r.title}</div><div class="reel-sub">${r.views} views</div></div>`;
-            card.addEventListener('click', () => openInfoModal('Reel', r));
+            const src = typeof r.video === 'string' ? r.video : URL.createObjectURL(r.video);
+            const poster = r.poster || '';
+            card.innerHTML = `<video class="reel-video" src="${src}" poster="${poster}" playsinline muted loop autoplay></video><div class="reel-overlay"></div><div class="reel-play"><i class="fa-solid fa-play"></i></div><div class="reel-meta"><div class="reel-title">${r.title}</div><div class="reel-sub">${r.views || ''} views</div></div>`;
+            card.addEventListener('click', () => openReelViewer(idx));
             reelContainerHome.appendChild(card);
           });
         }
@@ -2111,16 +2389,204 @@
       document.getElementById('reelsMoreHome')?.addEventListener('click', () => showToast('Reels'));
       document.getElementById('curatedMoreHome')?.addEventListener('click', () => showToast('Explore curated'));
       
-      document.getElementById('bookmarkBtn').addEventListener('click', () => showToast('Bookmarks'));
-      document.getElementById('profileBtn').addEventListener('click', () => showToast('Profile'));
+      function openProfilePopup() {
+        if (!infoModal || !infoTitle || !infoBody) return;
+        infoTitle.textContent = 'Your Profile';
+        infoBody.innerHTML = `
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+            <div style="width:56px; height:56px; border-radius:50%; background:#f1f5f9; background-image:url('https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&h=200&fit=crop'); background-size:cover; background-position:center;"></div>
+            <div>
+              <div style="font-weight:700;">findr user</div>
+              <div style="font-size:0.85rem; color:var(--muted);">hello@findr.local</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px;">
+            <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;">
+              <div style="font-weight:700;">12</div><div style="font-size:0.75rem; color:var(--muted);">Posts</div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;">
+              <div style="font-weight:700;">4</div><div style="font-size:0.75rem; color:var(--muted);">Reels</div>
+            </div>
+            <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;">
+              <div style="font-weight:700;">0</div><div style="font-size:0.75rem; color:var(--muted);">Bookmarks</div>
+            </div>
+          </div>
+          <div style="background:#ffffff; border:1px solid var(--line); padding:12px; border-radius:12px; margin-bottom:12px;">
+            <div style="font-weight:700; margin-bottom:6px;">About</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.9rem;">
+              <div><i class="fa-solid fa-phone" style="margin-right:6px;"></i> +1 555 0101</div>
+              <div><i class="fa-solid fa-location-dot" style="margin-right:6px;"></i> Bulawayo</div>
+              <div><i class="fa-regular fa-calendar" style="margin-right:6px;"></i> Joined 2025</div>
+              <div><i class="fa-solid fa-shield-halved" style="margin-right:6px;"></i> Basic plan</div>
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid var(--line); padding:12px; border-radius:12px; margin-bottom:12px;">
+            <div style="font-weight:700; margin-bottom:8px;">Preferences</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="carrier-btn secondary" id="toggleDark" style="padding:10px;"><i class="fa-regular fa-moon"></i> Dark mode</button>
+              <button class="carrier-btn secondary" id="toggleNotif" style="padding:10px;"><i class="fa-regular fa-bell"></i> Notifications</button>
+              <button class="carrier-btn secondary" id="toggleLocation" style="padding:10px;"><i class="fa-solid fa-location-arrow"></i> Location</button>
+            </div>
+          </div>
+          <div style="background:#ffffff; border:1px solid var(--line); padding:12px; border-radius:12px; margin-bottom:12px;">
+            <div style="font-weight:700; margin-bottom:6px;">Connected</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <span class="feature-tag available"><i class="fa-brands fa-whatsapp"></i> WhatsApp linked</span>
+              <span class="feature-tag"><i class="fa-regular fa-envelope"></i> Email verified</span>
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid var(--line); padding:12px; border-radius:12px;">
+            <div style="font-weight:700; margin-bottom:6px;">Recent activity</div>
+            <div style="font-size:0.9rem; color:var(--muted); display:flex; flex-direction:column; gap:6px;">
+              <div><i class="fa-solid fa-clapperboard" style="margin-right:6px;"></i> Watched “Hidden cafe” reel</div>
+              <div><i class="fa-solid fa-star" style="margin-right:6px;"></i> Rated “Roast & Brew”</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;">
+            <button class="carrier-btn secondary" style="padding:10px;"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+            <button class="carrier-btn secondary" style="padding:10px;"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+          </div>
+        `;
+        document.getElementById('toggleDark')?.addEventListener('click', () => showToast('Dark mode toggled'));
+        document.getElementById('toggleNotif')?.addEventListener('click', () => showToast('Notifications toggled'));
+        document.getElementById('toggleLocation')?.addEventListener('click', () => showToast('Location preference updated'));
+        infoModal.classList.add('active');
+      }
+      function openBookmarksPopup() {
+        if (!infoModal || !infoTitle || !infoBody) return;
+        infoTitle.textContent = 'Bookmarks';
+        const saved = [];
+        const listHtml = saved.length
+          ? saved.map(s => `<div style="padding:8px 0; border-bottom:1px dashed var(--line);">${s}</div>`).join('')
+          : `<div style="text-align:center; padding:20px 0; color:var(--muted);"><i class="fa-regular fa-bookmark" style="font-size:1.6rem;"></i><div style="margin-top:6px;">No bookmarks yet</div></div>`;
+        infoBody.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-weight:700;">Saved items</div>
+            <button class="carrier-btn secondary" id="clearBookmarks" style="padding:6px 10px;"><i class="fa-regular fa-trash-can"></i> Clear</button>
+          </div>
+          <div>${listHtml}</div>
+        `;
+        document.getElementById('clearBookmarks')?.addEventListener('click', () => {
+          showToast('Nothing to clear');
+        });
+        infoModal.classList.add('active');
+      }
+      document.getElementById('bookmarkBtn').addEventListener('click', openBookmarksPopup);
+      document.getElementById('profileBtn').addEventListener('click', openProfilePopup);
       document.getElementById('shuffleBtn').addEventListener('click', () => { places = places.map(v => ({ v, sort: Math.random() })).sort((a,b) => a.sort - b.sort).map(o => o.v); renderCards(); showToast('shuffled'); });
       document.getElementById('browseAllBtn').addEventListener('click', () => { activeCategory = 'all'; renderChips(); renderCards(); showToast('All places'); });
       document.getElementById('viewAllBtn').addEventListener('click', () => { showToast(`Viewing ${getFiltered().length} places`); });
       searchInput.addEventListener('input', renderCards);
+      function renderPosts() {
+        const feed = document.getElementById('postsFeed');
+        if (!feed) return;
+        feed.innerHTML = '';
+        POSTS.forEach(p => {
+          const post = document.createElement('div'); post.className = 'ig-post';
+          post.innerHTML = `
+            <div class="ig-header">
+              <div class="ig-avatar" style="background-image:url('${p.avatar}')"></div>
+              <div style="flex:1;">
+                <div class="ig-username">${p.user}</div>
+                <div class="ig-time">${p.time}</div>
+              </div>
+              <div><i class="fa-solid fa-ellipsis"></i></div>
+            </div>
+            <div class="ig-media" style="background-image:url('${p.image}')"></div>
+            <div class="ig-actions">
+              <div class="ig-actions-left"><i class="fa-regular fa-heart like-btn"></i><i class="fa-regular fa-comment"></i><i class="fa-regular fa-paper-plane"></i></div>
+              <div class="ig-actions-right"><i class="fa-regular fa-bookmark"></i></div>
+            </div>
+            <div class="ig-likes">${p.likes} likes</div>
+            <div class="ig-caption"><span style="font-weight:700;">${p.user}</span> ${p.caption}</div>
+          `;
+          post.querySelector('.like-btn')?.addEventListener('click', () => {
+            p.likes += 1;
+            renderPosts();
+          });
+          feed.appendChild(post);
+        });
+      }
 
+      function openDB(name, version, onup) {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(name, version);
+          req.onupgradeneeded = () => { const db = req.result; onup && onup(db); };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      function dbGetAll(db, store) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, 'readonly');
+          const st = tx.objectStore(store);
+          const req = st.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      function dbAdd(db, store, val) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, 'readwrite');
+          const st = tx.objectStore(store);
+          const req = st.add(val);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      function dbCount(db, store) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, 'readonly');
+          const st = tx.objectStore(store);
+          const req = st.count();
+          req.onsuccess = () => resolve(req.result || 0);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      let feedDB, uploadDB;
+      async function initReelDatabases() {
+        feedDB = await openDB('reelsFeedDB', 1, db => {
+          if (!db.objectStoreNames.contains('feed')) db.createObjectStore('feed', { keyPath: 'id', autoIncrement: true });
+        });
+        uploadDB = await openDB('reelsUploadDB', 1, db => {
+          if (!db.objectStoreNames.contains('uploads')) db.createObjectStore('uploads', { keyPath: 'id', autoIncrement: true });
+        });
+        const cnt = await dbCount(feedDB, 'feed');
+        if (cnt === 0) {
+          for (const r of SEED_REELS) await dbAdd(feedDB, 'feed', r);
+        }
+        const all = await dbGetAll(feedDB, 'feed');
+        REEL_FEED = all.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+        renderOtherSections();
+      }
+
+      initReelDatabases();
+
+      const reelUploadBtn = document.getElementById('reelUploadBtn');
+      reelUploadBtn?.addEventListener('click', async () => {
+        const fileEl = document.getElementById('reelFile');
+        const titleEl = document.getElementById('reelTitleInput');
+        if (!fileEl || !titleEl) return;
+        const file = fileEl.files && fileEl.files[0];
+        const title = titleEl.value.trim();
+        if (!file || !title) { showToast('Select a video and title'); return; }
+        const rec = { title, views:'0', video:file, poster:'', createdAt: Date.now() };
+        if (!uploadDB) uploadDB = await openDB('reelsUploadDB', 1, db => { if (!db.objectStoreNames.contains('uploads')) db.createObjectStore('uploads', { keyPath: 'id', autoIncrement: true }); });
+        await dbAdd(uploadDB, 'uploads', rec);
+        if (!feedDB) feedDB = await openDB('reelsFeedDB', 1, db => { if (!db.objectStoreNames.contains('feed')) db.createObjectStore('feed', { keyPath: 'id', autoIncrement: true }); });
+        await dbAdd(feedDB, 'feed', rec);
+        const all = await dbGetAll(feedDB, 'feed');
+        REEL_FEED = all.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+        renderOtherSections();
+        showToast('Reel uploaded');
+        fileEl.value = '';
+        titleEl.value = '';
+      });
+
+      renderPosts();
       renderChips(); renderCards(); renderRoute(); renderAllRoutes(); renderCarrier(); renderAllCarriers(); renderOtherSections();
     })();
   </script>
 </body>
 </html>
-

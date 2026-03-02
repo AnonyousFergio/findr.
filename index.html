@@ -1204,7 +1204,9 @@
       width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: white; font-size: 0.95rem;
     }
     .form-field textarea { min-height: 80px; resize: vertical; }
-    .section-note { font-size: 0.8rem; color: var(--muted); }
+    .section-note { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+    .file-row { display: flex; align-items: center; gap: 8px; }
+    .file-name { font-size: 0.85rem; color: var(--muted); }
 
     /* Timeline */
     .timeline {
@@ -1627,7 +1629,8 @@
           <div id="postSection" class="section">
             <div style="padding: 20px 0;">
               <div style="display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px 0;">
-                <span class="chip active" data-upload-type="rides" id="chipRides"><i class="fa-solid fa-car-side"></i> Driver/Delivery</span>
+                <span class="chip active" data-upload-type="driver" id="chipDriver"><i class="fa-solid fa-car-side"></i> Driver</span>
+                <span class="chip" data-upload-type="delivery" id="chipDelivery"><i class="fa-solid fa-box"></i> Delivery</span>
                 <span class="chip" data-upload-type="locations" id="chipLocations"><i class="fa-solid fa-location-dot"></i> Locations</span>
                 <span class="chip" data-upload-type="products" id="chipProducts"><i class="fa-solid fa-box"></i> Products</span>
               </div>
@@ -1637,7 +1640,7 @@
               </div>
               <div id="uploadFormArea" style="background:white; border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:0 8px 20px rgba(0,0,0,0.05);"></div>
               <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-                <button id="uploadSubmitBtn" class="carrier-btn primary" style="padding:10px 16px; border-radius:20px;"><i class="fa-solid fa-upload"></i> Upload</button>
+                <button id="uploadSubmitBtn" class="carrier-btn primary" style="padding:10px 16px; border-radius:20px;"><i class="fa-solid fa-plus"></i> Post</button>
               </div>
             </div>
           </div>
@@ -2614,8 +2617,10 @@
 
       let uploadDBHub;
       async function initUploadHubDB() {
-        uploadDBHub = await openDB('uploadsHubDB', 1, db => {
+        uploadDBHub = await openDB('uploadsHubDB', 3, db => {
           if (!db.objectStoreNames.contains('rides')) db.createObjectStore('rides', { keyPath: 'id', autoIncrement: true });
+          if (!db.objectStoreNames.contains('drivers')) db.createObjectStore('drivers', { keyPath: 'id', autoIncrement: true });
+          if (!db.objectStoreNames.contains('delivery')) db.createObjectStore('delivery', { keyPath: 'id', autoIncrement: true });
           if (!db.objectStoreNames.contains('locations')) db.createObjectStore('locations', { keyPath: 'id', autoIncrement: true });
           if (!db.objectStoreNames.contains('products')) db.createObjectStore('products', { keyPath: 'id', autoIncrement: true });
         });
@@ -2623,46 +2628,75 @@
       }
       initUploadHubDB();
 
-      let currentUploadType = 'rides';
-      const chipR = document.getElementById('chipRides');
+      let currentUploadType = 'driver';
+      const chipD = document.getElementById('chipDriver');
+      const chipDel = document.getElementById('chipDelivery');
       const chipL = document.getElementById('chipLocations');
       const chipP = document.getElementById('chipProducts');
-      [chipR, chipL, chipP].forEach(ch => ch && ch.addEventListener('click', () => {
-        [chipR, chipL, chipP].forEach(c => c && c.classList.remove('active'));
+      [chipD, chipDel, chipL, chipP].forEach(ch => ch && ch.addEventListener('click', () => {
+        [chipD, chipDel, chipL, chipP].forEach(c => c && c.classList.remove('active'));
         ch.classList.add('active');
-        currentUploadType = ch.getAttribute('data-upload-type') || 'rides';
+        currentUploadType = ch.getAttribute('data-upload-type') || 'driver';
         renderUploadForm();
+        renderUploadList();
       }));
+
+      function bindFileTriggers() {
+        document.querySelectorAll('.file-trigger').forEach(btn => {
+          const targetId = btn.getAttribute('data-target');
+          const input = document.getElementById(targetId);
+          const nameEl = document.getElementById(targetId + 'Name');
+          if (!input) return;
+          btn.addEventListener('click', () => input.click());
+          input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+            if (nameEl) nameEl.textContent = file ? file.name : 'No file chosen';
+          });
+        });
+      }
 
       function renderUploadForm() {
         const area = document.getElementById('uploadFormArea');
         if (!area) return;
-        if (currentUploadType === 'rides') {
+        if (currentUploadType === 'driver') {
           area.innerHTML = `
             <div class="form-grid">
-              <div class="form-field"><label>From</label><input id="rideFrom" placeholder="City Centre" /></div>
-              <div class="form-field"><label>To</label><input id="rideTo" placeholder="Hillside" /></div>
-              <div class="form-field"><label>Date</label><input id="rideDate" type="date" /></div>
-              <div class="form-field"><label>Time</label><input id="rideTime" type="time" /></div>
-              <div class="form-field"><label>Seats</label><input id="rideSeats" type="number" min="1" placeholder="e.g., 3" /></div>
-              <div class="form-field"><label>Price per seat ($)</label><input id="ridePrice" type="number" step="0.01" placeholder="e.g., 2.50" /></div>
-              <div class="form-field"><label>Vehicle</label><select id="rideVehicle"><option>Minibus</option><option>Car</option><option>Bus</option><option>Taxi</option></select></div>
-              <div class="form-field"><label>Contact phone</label><input id="ridePhone" placeholder="+263 ..." /></div>
-              <div class="form-field"><label>WhatsApp link (optional)</label><input id="rideWhatsApp" placeholder="https://wa.me/..." /></div>
+              <div class="form-field"><label>Full name</label><input id="drvName" placeholder="Your full name" /></div>
+              <div class="form-field"><label>Contact phone</label><input id="drvPhone" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="+263 ..." /></div>
+              <div class="form-field"><label>Vehicle</label><select id="drvVehicle"><option>Car</option><option>Minibus</option><option>Bus</option><option>Taxi</option><option>Motorbike</option></select></div>
+              <div class="form-field"><label>License number</label><input id="drvLicense" placeholder="e.g., ABC-12345" /></div>
+              <div class="form-field"><label>Available hours</label><input id="drvHours" placeholder="Mon–Fri 08–17" /></div>
+              <div class="form-field"><label>WhatsApp link (optional)</label><input id="drvWhatsApp" placeholder="https://wa.me/..." /></div>
             </div>
-            <div class="section-note">Provide at least From, To, and Date for a valid ride.</div>`;
+            <div class="section-note">Provide at least your full name, phone, and vehicle.</div>`;
+        } else if (currentUploadType === 'delivery') {
+          area.innerHTML = `
+            <div class="form-grid">
+              <div class="form-field"><label>Full name</label><input id="delName" placeholder="Your full name" /></div>
+              <div class="form-field"><label>Contact phone</label><input id="delPhone" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="+263 ..." /></div>
+              <div class="form-field"><label>Mode</label><select id="delMode"><option>Self</option><option>Bicycle</option><option>Motorbike</option><option>Car</option><option>Van</option></select></div>
+              <div class="form-field"><label>Max package weight (kg)</label><input id="delMaxWeight" type="number" step="0.1" placeholder="e.g., 10" /></div>
+              <div class="form-field"><label>Available hours</label><input id="delHours" placeholder="Mon–Sat 09–18" /></div>
+              <div class="form-field"><label>WhatsApp link (optional)</label><input id="delWhatsApp" placeholder="https://wa.me/..." /></div>
+            </div>
+            <div class="section-note">Provide at least your full name, phone, and mode.</div>`;
         } else if (currentUploadType === 'locations') {
           area.innerHTML = `
             <div class="form-grid">
               <div class="form-field"><label>Name</label><input id="locName" placeholder="Place name" /></div>
               <div class="form-field"><label>Category</label><input id="locCategory" placeholder="e.g., Cafe, Shop" /></div>
               <div class="form-field"><label>Address</label><input id="locAddress" placeholder="Street, Area" /></div>
-              <div class="form-field"><label>Latitude</label><input id="locLat" type="number" step="0.000001" placeholder="-20.123456" /></div>
-              <div class="form-field"><label>Longitude</label><input id="locLng" type="number" step="0.000001" placeholder="28.123456" /></div>
               <div class="form-field"><label>Phone</label><input id="locPhone" placeholder="+263 ..." /></div>
               <div class="form-field"><label>Open hours</label><input id="locHours" placeholder="Mon–Fri 08–17" /></div>
               <div class="form-field" style="grid-column:1/3;"><label>Description</label><textarea id="locDesc" placeholder="What makes this place special?"></textarea></div>
-              <div class="form-field" style="grid-column:1/3;"><label>Image URL (optional)</label><input id="locImage" placeholder="https://..." /></div>
+              <div class="form-field" style="grid-column:1/3;">
+                <label>Image (optional)</label>
+                <div class="file-row">
+                  <input id="locImageFile" type="file" accept="image/*" style="display:none;" />
+                  <button type="button" class="carrier-btn secondary file-trigger" data-target="locImageFile"><i class="fa-regular fa-image"></i> Upload</button>
+                  <span class="file-name" id="locImageFileName">No file chosen</span>
+                </div>
+              </div>
             </div>
             <div class="section-note">Name and Address are required for a location.</div>`;
         } else {
@@ -2672,37 +2706,54 @@
               <div class="form-field"><label>Price ($)</label><input id="prodPrice" type="number" step="0.01" placeholder="e.g., 12.00" /></div>
               <div class="form-field"><label>Category</label><input id="prodCategory" placeholder="e.g., Electronics" /></div>
               <div class="form-field"><label>Stock</label><input id="prodStock" type="number" min="0" placeholder="e.g., 5" /></div>
-              <div class="form-field" style="grid-column:1/3;"><label>Image URL</label><input id="prodImage" placeholder="https://..." /></div>
+              <div class="form-field" style="grid-column:1/3;">
+                <label>Image</label>
+                <div class="file-row">
+                  <input id="prodImageFile" type="file" accept="image/*" style="display:none;" />
+                  <button type="button" class="carrier-btn secondary file-trigger" data-target="prodImageFile"><i class="fa-regular fa-image"></i> Upload</button>
+                  <span class="file-name" id="prodImageFileName">No file chosen</span>
+                </div>
+              </div>
               <div class="form-field" style="grid-column:1/3;"><label>Description</label><textarea id="prodDesc" placeholder="Short description"></textarea></div>
               <div class="form-field"><label>Contact phone (optional)</label><input id="prodPhone" placeholder="+263 ..." /></div>
               <div class="form-field"><label>WhatsApp link (optional)</label><input id="prodWhatsApp" placeholder="https://wa.me/..." /></div>
             </div>
             <div class="section-note">Title and Price are required for a product.</div>`;
         }
+        bindFileTriggers();
       }
       renderUploadForm();
 
+      function storeNameFor(type) { return type === 'driver' ? 'drivers' : type; }
       async function saveUpload(rec) {
         if (!uploadDBHub) await initUploadHubDB();
-        await dbAdd(uploadDBHub, currentUploadType, rec);
+        await dbAdd(uploadDBHub, storeNameFor(currentUploadType), rec);
       }
       async function renderUploadList() {
         if (!uploadDBHub) return;
         const list = document.getElementById('uploadList');
         if (!list) return;
-        const items = await dbGetAll(uploadDBHub, currentUploadType);
+        const items = await dbGetAll(uploadDBHub, storeNameFor(currentUploadType));
         items.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
         list.innerHTML = items.map(item => {
-          if (currentUploadType === 'rides') {
+          if (currentUploadType === 'driver') {
+            return `<div style="background:white; border:1px solid var(--line); border-radius:12px; padding:10px;">
+              <div style="font-weight:700;"><i class="fa-solid fa-car-side"></i> ${item.name || 'Driver'}</div>
+              <div style="display:flex; gap:8px; color:var(--muted); font-size:0.85rem; margin-top:6px;">
+                <span><i class="fa-solid fa-van-shuttle"></i> ${item.vehicle || '-'}</span>
+                <span><i class="fa-solid fa-id-card"></i> ${item.license || '-'}</span>
+                <span><i class="fa-regular fa-clock"></i> ${item.hours || '-'}</span>
+              </div>
+            </div>`;
+          } else if (currentUploadType === 'delivery') {
             return `<div style="background:white; border:1px solid var(--line); border-radius:12px; padding:10px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-weight:700;"><i class="fa-solid fa-car-side"></i> ${item.from} → ${item.to}</div>
-                <div style="color:var(--muted); font-size:0.85rem;">${item.date || ''} ${item.time || ''}</div>
+                <div style="font-weight:700;"><i class="fa-solid fa-box"></i> ${item.name || 'Courier'}</div>
+                <div style="color:var(--muted); font-size:0.85rem;">${item.mode || ''}</div>
               </div>
               <div style="display:flex; gap:8px; color:var(--muted); font-size:0.85rem; margin-top:6px;">
-                <span><i class="fa-solid fa-chair"></i> ${item.seats || '-'}</span>
-                <span><i class="fa-solid fa-sack-dollar"></i> ${item.price ? '$'+item.price : '-'}</span>
-                <span><i class="fa-solid fa-van-shuttle"></i> ${item.vehicle || '-'}</span>
+                <span><i class="fa-solid fa-weight-scale"></i> ${item.maxWeight ? item.maxWeight+' kg' : '-'}</span>
+                <span><i class="fa-regular fa-clock"></i> ${item.hours || '-'}</span>
               </div>
             </div>`;
           } else if (currentUploadType === 'locations') {
@@ -2712,15 +2763,13 @@
                 <div style="color:var(--muted); font-size:0.85rem;">${item.category || ''}</div>
               </div>
               <div style="color:var(--muted); font-size:0.85rem; margin-top:4px;">${item.address || ''}</div>
-              <div style="display:flex; gap:8px; color:var(--muted); font-size:0.8rem; margin-top:6px;">
-                <span>Lat ${item.lat || '-'}</span><span>Lng ${item.lng || '-'}</span>
-                ${item.hours ? `<span>• ${item.hours}</span>` : ``}
-              </div>
+              ${item.hours ? `<div style="display:flex; gap:8px; color:var(--muted); font-size:0.8rem; margin-top:6px;"><span>${item.hours}</span></div>` : ``}
               ${item.desc ? `<div style="margin-top:6px; font-size:0.9rem;">${item.desc}</div>` : ``}
             </div>`;
           } else {
+            const imgSrc = item.image ? (typeof item.image === 'string' ? item.image : URL.createObjectURL(item.image)) : '';
             return `<div style="background:white; border:1px solid var(--line); border-radius:12px; padding:10px; display:flex; gap:10px; align-items:center;">
-              <div style="width:54px; height:54px; border-radius:12px; background:#f1f5f9; background-image:url('${item.image || ''}'); background-size:cover; background-position:center;"></div>
+              <div style="width:54px; height:54px; border-radius:12px; background:#f1f5f9; background-image:url('${imgSrc}'); background-size:cover; background-position:center;"></div>
               <div style="flex:1;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <div style="font-weight:700;"><i class="fa-solid fa-box"></i> ${item.title}</div>
@@ -2735,43 +2784,49 @@
       }
       const uploadBtn = document.getElementById('uploadSubmitBtn');
       uploadBtn?.addEventListener('click', async () => {
-        if (currentUploadType === 'rides') {
-          const from = document.getElementById('rideFrom')?.value?.trim();
-          const to = document.getElementById('rideTo')?.value?.trim();
-          const date = document.getElementById('rideDate')?.value;
-          const time = document.getElementById('rideTime')?.value;
-          const seats = document.getElementById('rideSeats')?.value?.trim();
-          const price = document.getElementById('ridePrice')?.value?.trim();
-          const vehicle = document.getElementById('rideVehicle')?.value?.trim();
-          const phone = document.getElementById('ridePhone')?.value?.trim();
-          const wapp = document.getElementById('rideWhatsApp')?.value?.trim();
-          if (!from || !to || !date) { showToast('From, To, and Date are required'); return; }
-          await saveUpload({ from, to, date, time, seats, price, vehicle, phone, wapp, createdAt: Date.now() });
+        if (currentUploadType === 'driver') {
+          const name = document.getElementById('drvName')?.value?.trim();
+          const phone = document.getElementById('drvPhone')?.value?.trim();
+          const vehicle = document.getElementById('drvVehicle')?.value?.trim();
+          const license = document.getElementById('drvLicense')?.value?.trim();
+          const hours = document.getElementById('drvHours')?.value?.trim();
+          const wapp = document.getElementById('drvWhatsApp')?.value?.trim();
+          if (!name || !phone || !vehicle) { showToast('Name, phone, and vehicle are required'); return; }
+          await saveUpload({ name, phone, vehicle, license, hours, wapp, createdAt: Date.now() });
+        } else if (currentUploadType === 'delivery') {
+          const name = document.getElementById('delName')?.value?.trim();
+          const phone = document.getElementById('delPhone')?.value?.trim();
+          const mode = document.getElementById('delMode')?.value?.trim();
+          const maxWeight = document.getElementById('delMaxWeight')?.value?.trim();
+          const hours = document.getElementById('delHours')?.value?.trim();
+          const wapp = document.getElementById('delWhatsApp')?.value?.trim();
+          if (!name || !phone || !mode) { showToast('Name, phone, and mode are required'); return; }
+          await saveUpload({ name, phone, mode, maxWeight, hours, wapp, createdAt: Date.now() });
         } else if (currentUploadType === 'locations') {
           const name = document.getElementById('locName')?.value?.trim();
           const category = document.getElementById('locCategory')?.value?.trim();
           const address = document.getElementById('locAddress')?.value?.trim();
-          const lat = document.getElementById('locLat')?.value?.trim();
-          const lng = document.getElementById('locLng')?.value?.trim();
           const phone = document.getElementById('locPhone')?.value?.trim();
           const hours = document.getElementById('locHours')?.value?.trim();
           const desc = document.getElementById('locDesc')?.value?.trim();
-          const image = document.getElementById('locImage')?.value?.trim();
+          const imgFileEl = document.getElementById('locImageFile');
+          const image = imgFileEl && imgFileEl.files && imgFileEl.files[0] ? imgFileEl.files[0] : null;
           if (!name || !address) { showToast('Name and Address are required'); return; }
-          await saveUpload({ name, category, address, lat, lng, phone, hours, desc, image, createdAt: Date.now() });
+          await saveUpload({ name, category, address, phone, hours, desc, image, createdAt: Date.now() });
         } else {
           const title = document.getElementById('prodTitle')?.value?.trim();
           const price = document.getElementById('prodPrice')?.value?.trim();
           const category = document.getElementById('prodCategory')?.value?.trim();
           const stock = document.getElementById('prodStock')?.value?.trim();
-          const image = document.getElementById('prodImage')?.value?.trim();
+          const imgFileEl = document.getElementById('prodImageFile');
+          const image = imgFileEl && imgFileEl.files && imgFileEl.files[0] ? imgFileEl.files[0] : null;
           const desc = document.getElementById('prodDesc')?.value?.trim();
           const phone = document.getElementById('prodPhone')?.value?.trim();
           const wapp = document.getElementById('prodWhatsApp')?.value?.trim();
           if (!title || !price) { showToast('Title and Price are required'); return; }
           await saveUpload({ title, price, category, stock, image, desc, phone, wapp, createdAt: Date.now() });
         }
-        showToast('Uploaded');
+        showToast('Posted');
         renderUploadList();
       });
 
